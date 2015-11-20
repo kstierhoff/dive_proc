@@ -10,8 +10,8 @@ Sys.setenv(TZ='GMT')
 # # Source ROV functions
 # source("functions.R")
 # load libraries
-library(RODBC);library(reshape2);library(plyr);library(ggplot2);
-library(stringr);library(surveyR);library(vegan);library(scales);
+library(RODBC);library(reshape2);library(plyr);library(ggplot2);library(forecast);
+library(stringr);library(surveyR);library(vegan);library(scales);library(grid);
 
 # You are about to process DAT, LOG, CTD and PHOTO data for a series of ROV transects
 # You will need to supply some information below
@@ -25,7 +25,7 @@ library(stringr);library(surveyR);library(vegan);library(scales);
 db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb" # "C:/Users/ROV_LAB/Desktop/White Abalone 2015/ROV_AtSea_20150605.accdb" 
 # Enter the start and end dive names (if only processing one dive, make these the same)
 start.dir 	<- "14-163F"
-end.dir 	<- "14-163G"
+end.dir 	<- "14-163F"
 # Is the CTD present (this will almost always be TRUE)
 ctd.on <- TRUE
 # Which ROV was used (e.g., HDHV or Phantom)
@@ -35,7 +35,7 @@ ROV <- "HDHV"
 timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add date/time)
 nav.smoother <- 15
 # path to R processing code
-proc.file <- "C:/Users/kls/Documents/Projects/2015 ROV Transect Processing/dive_proc.R"
+proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc"
 
 ###########################################################################################
 ###########################################################################################
@@ -175,12 +175,14 @@ for (i in dir.list){
     DAT$oxy.sat <- calc_sat(DAT$sal,DAT$temp,DAT$oxy.conc) 
   }
   ###############################################################
-  # smooth ROV pitch and altitude for transect width calculations; replace NAs with raw (unsmoothed) data
+  # smooth ROV roll, pitch and altitude for transect width calculations; replace NAs with raw (unsmoothed) data
   DAT$alt_sm <- ma(DAT$alt,order=nav.smoother)
   isna <- which(is.na(DAT$alt_sm)==TRUE)
   DAT$alt_sm[isna] <- DAT$alt[isna]
   DAT$pitch_sm <- ma(DAT$pitch,order=nav.smoother)
   DAT$pitch_sm[isna] <- DAT$pitch[isna]
+  DAT$roll_sm <- ma(DAT$roll,order=nav.smoother)
+  DAT$roll_sm[isna] <- DAT$roll[isna]
   # Calculate slant range (m), center width (m), and area searched (sq. m) from the camera pitch, altitude, and 
   # horizontal viewing angle using the method described in Stierhoff et al. (in review)
   width.df <- calc_width(DAT$pitch_sm,DAT$alt_sm,ROV=ROV)
@@ -236,21 +238,42 @@ for (i in dir.list){
   # save image of physical data plot	
   ggsave(ctd.p,filename = file.path(i,paste(dive.name,"PhysData.png",sep="_")),height=9.8,width=13.3,units="in")
   
-  # plot pitch/roll data
-  pr.gg	<- melt(DAT[ ,c("date.time","pitch","roll")],id=c("date.time"))
-  pr.p	<- ggplot(pr.gg,aes(x=date.time,y=value,colour=variable)) + 
-    geom_line() + theme_bw() + labs(title = paste("Pitch/Roll Data from ",dive.name,"\n",sep="")) +
-    xlab("\nDate/time (GMT)") + ylab("Pitch/Roll (degrees)\n") + scale_x_datetime() + scale_colour_manual(values=c("blue","green"))
-  # save image of CTD plot	
-  ggsave(pr.p,filename = file.path(i,paste(dive.name,"PitchRollData.png",sep="_")),height=9.8,width=13.3,units="in")
+  # plot pitch data
+  p.gg	<- melt(DAT[ ,c("date.time","pitch","pitch_sm")],id=c("date.time"))
+  p.p	<- ggplot(p.gg,aes(x=date.time,y=value,colour=variable)) + 
+    geom_line() + theme_bw() + labs(title = paste("ROV data from ",dive.name,"\n",sep="")) +
+    xlab("") + ylab("Pitch (degrees)\n") + scale_x_datetime() + scale_colour_manual(values=c("black","green"))
+  # plot roll data
+  r.gg	<- melt(DAT[ ,c("date.time","roll","roll_sm")],id=c("date.time"))
+  r.p	<- ggplot(r.gg,aes(x=date.time,y=value,colour=variable)) + 
+    geom_line() + theme_bw() + 
+    xlab("") + ylab("Roll (degrees)\n") + scale_x_datetime() + scale_colour_manual(values=c("black","blue"))
+  # plot altitude data
+  a.gg	<- melt(DAT[ ,c("date.time","alt","alt_sm","camera_alt")],id=c("date.time"))
+  a.p	<- ggplot(a.gg,aes(x=date.time,y=value,colour=variable)) + 
+    geom_line() + theme_bw() + 
+    xlab("") + ylab("Altitude (meters)\n") + scale_x_datetime() + scale_colour_manual(values=c("black","red","blue"))
   
   # plot of ROV depth and altitude to select transect start and end
   z.gg	<- melt(DAT[ ,c("date.time","depth.r","depth.msw")],id=c("date.time"))
   z.p		<- ggplot(z.gg,aes(x=date.time,y=value,colour=variable)) + 
     geom_line() + theme_bw() + scale_colour_manual(values=c("green","black")) + 
-    xlab("\nDate/time") + ylab("Depth (m)\n") +	scale_x_datetime() +	
-    labs(title = paste("Depth data from ",dive.name,"\n",sep=""))
-  ggsave(z.p,filename = file.path(i,paste(dive.name,"DepthData.png",sep="_")),height=5,width=10,units="in")		
+    xlab("\nDate/time") + ylab("Depth (m)\n") +	scale_x_datetime()
+
+  # save image of pitch, roll, and altitude plot	  
+  png(file=file.path(i,paste(dive.name,"NavData.png",sep="_")),w=1800,h=1500, res=150)
+  grid.newpage()
+  grid.arrange(p.p,r.p,a.p,z.p,nrow=4)
+  invisible(dev.off())
+
+  # plot results of width and area calculations
+  width.df$date_time <- DAT$date.time
+  w.gg <-  melt(width.df,id=c("date_time"))
+  w.p <- ggplot(w.gg,aes(x=date_time,y=value,colour=variable)) + 
+    geom_line() + theme_bw() + scale_colour_manual(values=c("green","black","blue")) + 
+    xlab("\nDate/time") + ylab("Variable (m)\n") +	scale_x_datetime() +	
+    labs(title = paste("Camera data from ",dive.name,"\n",sep=""))
+  ggsave(w.p,filename = file.path(i,paste(dive.name,"CameraData.png",sep="_")),height=5,width=10,units="in")
   
   # plot lat/lon data of the ROV and ship (try ggmap)
   ship <- DAT[ ,c("lat.s","lon.s")] 
