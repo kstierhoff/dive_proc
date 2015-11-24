@@ -299,7 +299,7 @@ for (i in dir.list){
     cat(paste("Log file for",dive.name,"is empty.\n"))
   } else{
     # Else, process the LOG file
-    LOG <- read.csv("logs.LOG",header=FALSE)
+    LOG <- read.csv(file.path(i,"logs.LOG"),header=FALSE)
     LOG <- LOG[ ,c(1,3:11,46:53)]
     names(LOG) <- c("comment","date.time","lat.r","lon.r","depth.r","hdg.r","cmg.r","speed.r","n.r","e.r",
                     "lat.s","lon.s","depth.s","hdg.s","cmg.s","speed.s","n.s","e.s")
