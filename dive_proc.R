@@ -11,7 +11,7 @@ Sys.setenv(TZ='GMT')
 # source("functions.R")
 # load libraries
 library(RODBC);library(reshape2);library(plyr);library(ggplot2);library(forecast);
-library(stringr);library(surveyR);library(vegan);library(scales);library(grid);
+library(stringr);library(surveyR);library(vegan);library(scales);library(grid);library(gridExtra);
 
 # You are about to process DAT, LOG, CTD and PHOTO data for a series of ROV transects
 # You will need to supply some information below
@@ -22,7 +22,7 @@ library(stringr);library(surveyR);library(vegan);library(scales);library(grid);
 ###########################################################################################
 ###########################################################################################
 # Enter the directory of the ROV database
-db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb" # "C:/Users/ROV_LAB/Desktop/White Abalone 2015/ROV_AtSea_20150605.accdb" 
+db.dir <- "C:/Users/ROV_LAB/Desktop/White Abalone 2015/ROV_AtSea_20150605.accdb" 
 # Enter the start and end dive names (if only processing one dive, make these the same)
 start.dir 	<- "14-163F"
 end.dir 	<- "14-163F"
