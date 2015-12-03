@@ -17,11 +17,11 @@ library(stringr);library(surveyR);library(vegan);library(scales);library(grid);l
 
 # User-defined variables ####
 # Enter the directory of the ROV database
-# db.dir <- "C:/Users/ROV_LAB/Desktop/White Abalone 2015/ROV_AtSea_20150605.accdb"  # on ROV laptop
-db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb"  # on KLS desktop
+db.dir <- "C:/Users/ROV_LAB/Desktop/White Abalone 2015/ROV_AtSea_20150605.accdb"  # on ROV laptop
+# db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb"  # on KLS desktop
 # Enter the start and end dive names (if only processing one dive, make these the same)
-start.dir 	<- "14-163F"
-end.dir 	<- "14-163G"
+start.dir 	<- "15-160A"
+end.dir 	<- "15-160B"
 # Is the CTD present (this will almost always be TRUE)
 ctd.on <- TRUE
 # Which ROV was used (e.g., HDHV or Phantom)
@@ -31,8 +31,8 @@ ROV <- "HDHV"
 timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add date/time)
 nav.smoother <- 15
 # path to R processing code
-# proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
-proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
+proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
+# proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
 
 # Query starting IDs for all database tables ####
 channel <- odbcConnectAccess2007(db.dir)
@@ -318,9 +318,9 @@ for (i in dir.list){
     LOG.write <- LOG.output 
     LOG.write$date_time <- format(LOG.output$date_time,format="%m/%d/%Y %H:%M:%S")
     # write dive events to text file
-    write.csv(LOG.write,file=paste(dive.name,"DiveEvents.txt", sep = "_"),row.names = FALSE,quote=FALSE,na="")
+    write.csv(LOG.write,file=file.path(i,paste(dive.name,"DiveEvents.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="")
     # save Rdata file
-    save(LOG,file=paste(dive.name,"LOG.Rdata",sep="_"))
+    save(LOG,file=file.path(i,paste(dive.name,"LOG.Rdata",sep="_")))
     # add results to LOG.temp
     LOG.temp <- rbind(LOG.temp,LOG.write)
   }
