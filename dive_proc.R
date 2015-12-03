@@ -1,14 +1,13 @@
-# Code for processing ROV nav, event, CTD, and photo data generated during ROV
-# dives (WinFrog v2 .DAT files, .LOG files, CTD files, and photo exif data).
-# 30 October 2015        Kevin Stierhoff
+# Code for processing ROV nav, event, CTD, and photo data generated during ROV transects
+# Applies to WinFrog v2 .DAT files, .LOG files, CTD files, and photo exif data
 
-###########################################################################################
+# Kevin L. Stierhoff
+
+# Script setup #####
 # clear system memory
 rm(list=ls())
 # Set time zone to GMT
-Sys.setenv(TZ='GMT')
-# # Source ROV functions
-# source("functions.R")
+Sys.setenv(TZ="GMT")
 # load libraries
 library(RODBC);library(reshape2);library(plyr);library(ggplot2);library(forecast);
 library(stringr);library(surveyR);library(vegan);library(scales);library(grid);library(gridExtra);
@@ -16,16 +15,13 @@ library(stringr);library(surveyR);library(vegan);library(scales);library(grid);l
 # You are about to process DAT, LOG, CTD and PHOTO data for a series of ROV transects
 # You will need to supply some information below
 
-###########################################################################################
-###########################################################################################
-# User-defined variables
-###########################################################################################
-###########################################################################################
+# User-defined variables ####
 # Enter the directory of the ROV database
-db.dir <- "C:/Users/ROV_LAB/Desktop/White Abalone 2015/ROV_AtSea_20150605.accdb" 
+# db.dir <- "C:/Users/ROV_LAB/Desktop/White Abalone 2015/ROV_AtSea_20150605.accdb"  # on ROV laptop
+db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb"  # on KLS desktop
 # Enter the start and end dive names (if only processing one dive, make these the same)
 start.dir 	<- "14-163F"
-end.dir 	<- "14-163F"
+end.dir 	<- "14-163G"
 # Is the CTD present (this will almost always be TRUE)
 ctd.on <- TRUE
 # Which ROV was used (e.g., HDHV or Phantom)
@@ -35,12 +31,10 @@ ROV <- "HDHV"
 timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add date/time)
 nav.smoother <- 15
 # path to R processing code
-proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc"
+# proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
+proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
 
-###########################################################################################
-###########################################################################################
-
-# Query starting IDs for all database tables
+# Query starting IDs for all database tables ####
 channel <- odbcConnectAccess2007(db.dir)
 nav.seed    <- as.numeric(sqlQuery(channel, "SELECT max(dbo_tbl_NAV_DATA.nav_id) AS nav_seed
                                    FROM dbo_tbl_NAV_DATA;")[1]+1)
@@ -51,17 +45,14 @@ photo.seed  <- as.numeric(sqlQuery(channel, "SELECT max(dbo_tbl_PHOTO_INFO.photo
 ctd.seed    <- as.numeric(sqlQuery(channel, "SELECT max(dbo_tbl_CTD_CASTS.ctd_id) AS nav_seed
                                    FROM dbo_tbl_CTD_CASTS;")[1]+1)
 close(channel)
-##########################
-# Create temporary data frames for storing processing results
-##########################
+
+# Create temporary data frames for storing processing results ####
 DAT.temp 	<- data.frame()
 PHOTO.temp	<- data.frame()
 LOG.temp 	<- data.frame()
 CTD.temp 	<- data.frame()
 
-##########################
-# Process NAV date from DAT files
-##########################
+# Process NAV date from DAT files ####
 if(.Platform$OS.type == "unix") { 
   # if working on a Mac
   dat.root 	<- "/Users/kevinstierhoff/NAVDATA" 	# This is the WinFrog project directory
@@ -76,14 +67,12 @@ d <- sort(dir(dat.root,recursive=FALSE,pattern='\\d{2}-\\d{3}\\w',full.names=TRU
 # dir.list <- d[which(d == start.dir):which(d == end.dir)]
 dir.list <- d[grep(start.dir,d):grep(end.dir,d)]
 
-#create status bar
-# pb1 <- winProgressBar(min = 0, max = length(dir.list))
+# create status bar
 pb <- winProgressBar(title="DAT File Processing Progress", label="0% done", min=0, max=100, initial=0)
 # set initial variable for counter
 j <- 1
 
 for (i in dir.list){
-  ##########################################################
   # Copy this script and the functions source code to the DAT directory
   invisible(file.copy(proc.file,i,overwrite = TRUE))
   # extract dive name from directory path
@@ -99,9 +88,8 @@ for (i in dir.list){
                   "blank","blank")
   # remove variables with no data
   DAT <- DAT[ ,names(DAT)!="blank"]
-  
-  ##########################################################	
-  # process DAT file
+
+  # Process DAT file ####
   # create nav_id and object_id
   DAT$nid <- seq(nav.seed,nav.seed+dim(DAT)[1]-1,1)
   DAT$oid <- DAT$oid + 1
@@ -127,8 +115,8 @@ for (i in dir.list){
   # calculate ROV distances (m)
   DAT$disp.r <- DAT$speed.r * 0.514444444 * time.int
   DAT$disp.r.total <- cumsum(DAT$disp.r)
-  ##########################################################
-  # add DVL pitch/roll to position sensor to get the actual pitch/roll of the camera
+  
+  # Add DVL pitch/roll to position sensor to get the actual pitch/roll of the camera ####
   # get directory of WinFrog RAW files to read
   raw.files <- list.files(i,pattern = "*.RAW",full.names=TRUE)
   pr.data <- data.frame()
@@ -155,8 +143,8 @@ for (i in dir.list){
   pr.data$roll <- as.numeric(as.character(pr.data$roll))
   # add DVL pitch to the pitch measured by the tilt tray position sensor
   DAT$pitch <- DAT$pitch + round(pr.data$pitch)
-  ##########################################################
-  # process CTD data
+
+  # Process CTD data ####
   if(ctd.on == FALSE){  # If CTD not present, make data -999
     DAT$sal      	  <- rep(-999,length.DAT);
     DAT$conductivity  <- sal;
@@ -174,8 +162,9 @@ for (i in dir.list){
     # calculate oxygen saturation during transect
     DAT$oxy.sat <- calc_sat(DAT$sal,DAT$temp,DAT$oxy.conc) 
   }
-  ###############################################################
-  # smooth ROV roll, pitch and altitude for transect width calculations; replace NAs with raw (unsmoothed) data
+
+  # Smooth ROV roll, pitch and altitude for width/area calculations ####
+  # replace NAs with raw (unsmoothed) data
   DAT$alt_sm <- ma(DAT$alt,order=nav.smoother)
   isna <- which(is.na(DAT$alt_sm)==TRUE)
   DAT$alt_sm[isna] <- DAT$alt[isna]
@@ -183,24 +172,26 @@ for (i in dir.list){
   DAT$pitch_sm[isna] <- DAT$pitch[isna]
   DAT$roll_sm <- ma(DAT$roll,order=nav.smoother)
   DAT$roll_sm[isna] <- DAT$roll[isna]
-  # Calculate slant range (m), center width (m), and area searched (sq. m) from the camera pitch, altitude, and 
-  # horizontal viewing angle using the method described in Stierhoff et al. (in review)
+  
+  # Calculate width and area ####
+  # uses the method described in Stierhoff et al. (in review) and calc_width function in surveyR package
   width.df <- calc_width(DAT$pitch_sm,DAT$alt_sm,ROV=ROV)
-  DAT$camera_alt    <- width.df$camera_alt   # slant range (m)  
+  DAT$camera_alt    <- width.df$camera_alt   # camera altitude (m)  
   DAT$slant_range   <- width.df$slant_range  # slant range (m)
   DAT$center_width  <- width.df$center_width # center width (m)
   DAT$area          <- DAT$disp.r * DAT$center_width # area (sq.m)
   DAT$cum_area      <- cumsum(DAT$area)      # cumuilative area (sq.m)
   
-  ###############################################################	
-  # select nav data to output to the database
+  # Select nav data for database export ####
   DAT.output <- DAT[ ,c("nid","oid","dive.name","date.time",
                         "lat.s","lon.s","n.s","e.s","hdg.s","cmg.s","speed.s","disp.s","disp.s.total","lat.r","lon.r","depth.r","n.r","e.r","hdg.r","cmg.r","speed.r",
-                        "pitch","roll","temp","cond","press","sal","sound.vel","oxy.conc","oxy.sat","alt","disp.r","disp.r.total","area","cum_area")]
+                        "pitch","roll","temp","cond","press","sal","sound.vel","oxy.conc","oxy.sat","alt","disp.r","disp.r.total","area","cum_area",
+                        "camera_alt","slant_range","center_width")]
   names(DAT.output) <- c("nav_id","object_id","dive_name","date_time",
                          "lat_dd_s","lon_dd_s","northing_s","easting_s","heading_s","cmg_s","speed_s","disp_s","total_disp_s","lat_dd_r","lon_dd_r","depth_r",
                          "northing_r","easting_r","heading_r","cmg_r","speed_r","pitch","roll","temperature","conductivity","pressure","salinity","sound_vel",
-                         "oxygen_conc","oxygen_sat","altitude","disp_r","cum_disp_r","area_r","cum_area_r")
+                         "oxygen_conc","oxygen_sat","altitude","disp_r","cum_disp_r","area_r","cum_area_r",
+                         "camera_altitude","slant_range","center_width")
   # save Rdata file
   save(DAT,file=file.path(i,paste(dive.name,"DAT.Rdata",sep="_")))
   
@@ -211,33 +202,34 @@ for (i in dir.list){
   # add results to DAT.temp
   DAT.temp <- rbind(DAT.temp,DAT.write)
   
-  ## Write nav data to .CSV file for 3Beam analysis
-  # create zero vectors for speed_fa and speed_ps
+  # write nav data to .CSV file for 3Beam analysis
   DAT.fov <- DAT.output
+  # create zero vectors for speed_fa and speed_ps
   DAT.fov$speed_fa <- rep(0,dim(DAT)[1])
   DAT.fov$speed_ps <- rep(0,dim(DAT)[1])
   DAT.fov$date <- strptime(as.character(DAT.fov$date_time),"%m/%d/%Y")
   DAT.fov$date <- format(DAT.fov$date_time,"%m/%d/%Y")
   DAT.fov$time <- format(DAT.fov$date_time,"%H:%M:%S")
-  # Write headers
+  
+  # select data for export
   DAT.fov <- DAT.fov[ ,c("dive_name","date","time","heading_r","pitch","roll","altitude","disp_r",
                          "cum_disp_r","speed_fa","speed_ps","lat_dd_r","lon_dd_r","depth_r")]	
+  # rename columns
   names(DAT.fov) <- c("dive_name","date","time","heading","pitch","roll","altitude","disp",
                       "total_disp","speed_fa","speed_ps","lat_dd","lon_dd","depth")
+  # write to file
   write.csv(DAT.fov,file = file.path(i,paste(dive.name,"3BeamNav.csv",sep="_")),quote=FALSE, row.names=FALSE)
   
-  ###############################################################
-  # Plot results
-  # plot physical data
+  # Plot CTD data and save ####
   ctd.gg 	<- melt(DAT[ ,c("date.time","depth.r","depth.msw","sal","cond","temp","press",
                           "sound.vel","oxy.conc","oxy.sat")],id=c("date.time"))
   ctd.p 	<- ggplot(ctd.gg,aes(x=date.time,y=value,group=variable)) + 
     geom_line(colour="blue") + facet_wrap(~variable, scales="free") + theme_bw() + 
     labs(title = paste("CTD Data from transect ",dive.name,"\n",sep="")) + xlab("\nDate/time (GMT)") + ylab("Sensor value\n") +
     scale_x_datetime()
-  # save image of physical data plot	
   ggsave(ctd.p,filename = file.path(i,paste(dive.name,"PhysData.png",sep="_")),height=9.8,width=13.3,units="in")
   
+  # Plot results from center width and area calculations ####
   # plot pitch data
   p.gg	<- melt(DAT[ ,c("date.time","pitch","pitch_sm")],id=c("date.time"))
   p.p	<- ggplot(p.gg,aes(x=date.time,y=value,colour=variable)) + 
@@ -253,20 +245,19 @@ for (i in dir.list){
   a.p	<- ggplot(a.gg,aes(x=date.time,y=value,colour=variable)) + 
     geom_line() + theme_bw() + 
     xlab("") + ylab("Altitude (meters)\n") + scale_x_datetime() + scale_colour_manual(values=c("black","red","blue"))
-  
-  # plot of ROV depth and altitude to select transect start and end
+  # plot of ROV depth and altitude data
   z.gg	<- melt(DAT[ ,c("date.time","depth.r","depth.msw")],id=c("date.time"))
   z.p		<- ggplot(z.gg,aes(x=date.time,y=value,colour=variable)) + 
     geom_line() + theme_bw() + scale_colour_manual(values=c("green","black")) + 
     xlab("\nDate/time") + ylab("Depth (m)\n") +	scale_x_datetime()
 
-  # save image of pitch, roll, and altitude plot	  
+  # save plot of pitch, roll, and altitude plot	  
   png(file=file.path(i,paste(dive.name,"NavData.png",sep="_")),w=1800,h=1500, res=150)
   grid.newpage()
   grid.arrange(p.p,r.p,a.p,z.p,nrow=4)
   invisible(dev.off())
 
-  # plot results of width and area calculations
+  # Plot camera data ####
   width.df$date_time <- DAT$date.time
   w.gg <-  melt(width.df,id=c("date_time"))
   w.p <- ggplot(w.gg,aes(x=date_time,y=value,colour=variable)) + 
@@ -275,7 +266,7 @@ for (i in dir.list){
     labs(title = paste("Camera data from ",dive.name,"\n",sep=""))
   ggsave(w.p,filename = file.path(i,paste(dive.name,"CameraData.png",sep="_")),height=5,width=10,units="in")
   
-  # plot lat/lon data of the ROV and ship (try ggmap)
+  # Plot lat/lon data of the ROV and ship ####
   ship <- DAT[ ,c("lat.s","lon.s")] 
   ship$name <- rep("ship",dim(ship)[1])
   names(ship) <- c("lat","lon","vessel")
@@ -286,12 +277,9 @@ for (i in dir.list){
   ll.p	<- ggplot(ll.gg,aes(x=lon,y=lat,colour = vessel)) +
     geom_path() + theme_bw() + labs(title = paste("Lat/Lon data from ",dive.name,"\n",sep="")) +
     xlab("\nLongitude") + ylab("Latitude\n") + scale_colour_manual(values=c("blue","green"))
-  # save image of lat/lon plot	
   ggsave(ll.p,filename = file.path(i,paste(dive.name,"LatLonData.png",sep="_")))
   
-  ##########################
-  # Process dive events from LOG file
-  ##########################
+  # Process WinFrog events from LOG file ####
   log.info <- file.info(file.path(i,'logs.LOG'))
   
   if (log.info$size == 0){
@@ -337,12 +325,9 @@ for (i in dir.list){
     LOG.temp <- rbind(LOG.temp,LOG.write)
   }
   
-  ##########################
-  # Process photos to get metadata and sync with nav data
-  ##########################
+  # Process photos to get metadata and sync with nav data ####
   photo.list <- dir(photo.root,recursive=FALSE,pattern='\\d{2}-\\d{3}\\w',full.names=TRUE)
   p <- photo.list[grep(dive.name,photo.list)]
-  
   
   if(length(grep(dive.name,p))>0){ # if photos were taken, then the photo directory exists in photo.root
     if(.Platform$OS.type == "unix") {
@@ -395,10 +380,7 @@ for (i in dir.list){
     cat(paste("No photos to process for",dive.name,".\n"))
   }
   
-  ##########################
-  # Process CTD cast data
-  ##########################
-  # CTD.dir <- dir(pattern = "?CTD", ignore.case = TRUE)
+  # Process CTD cast data ####
   CTD.dir <- list.files(i,pattern='\\d{2}-\\d{3}\\w{1}_(CTD.).DAT',full.names=TRUE)
   
   if(length(CTD.dir)==0){
@@ -437,7 +419,7 @@ for (i in dir.list){
       time.int <- CTD$CTDe.time[2:length.CTD] - CTD$CTDe.time[1:length.CTD-1]
       time.int <- c(time.int,0)
       # process CTD data
-      if(ctd.on == FALSE){  # If CTD not present, make data -999
+      if(ctd.on == FALSE){  # If CTD is not installed, make data -999
         CTD$sal      	  <- rep(-999,length.CTD);
         CTD$conductivity  <- sal;
         CTD$oxygen_conc   <- sal;
@@ -485,9 +467,8 @@ for (i in dir.list){
     }
   }
   
-  ##########################
-  # Calculate and report new indices for next transect
-  ##########################	
+  # Calculate and report new indices for next transect ####
+  
   # Calculate next nav_id
   nav.seed <- max(DAT$nid)+1	
   # Calculate next event_id
@@ -537,9 +518,11 @@ if(length(CTD.dir) > 0){
   write.csv(CTD.temp,file=paste(start.dir,end.dir,"CTDCasts.txt", sep = "_"),row.names = FALSE,quote=FALSE)
 }
 
-# Report new indices for next dive
+# Report new indices for next dive ####
 cat(paste("Finished processing dives",start.dir,"to",end.dir,"\n", sep=" "),
     paste("Next nav_id is: ",nav.seed,"\n"),
     paste("Next event_id is: ",event.seed,"\n"),
     paste("Next photo_id is: ",photo.seed,"\n"),
     paste("Next ctd_id is: ",ctd.seed,"\n"),sep="")
+
+# End of script ####
