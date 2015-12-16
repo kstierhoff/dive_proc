@@ -1,0 +1,196 @@
+June 9, 2015 03:13:28 : Session begin 
+
+Configuration file C:\NavData\15-155A\15-155A.cfg
+Geodetic Parameters
+Ellipsoid Parameters
+Ellipse Name         : WGS84
+Datum Name         : WGS84
+Semi-Major Axis    : 6378137.00m
+Inverse Flattening : 298.257223600
+Datum Transformation Method: Bursa-Wolf (7 param.)
+Datum Transformation Parameters
+X Datum Shift      : 0.00m
+Y Datum Shift      : 0.00m
+Z Datum Shift      : 0.00m
+Scale Factor       : 0.0000000000
+X Rotation         :    0  0 00.0000
+Y Rotation         :    0  0 00.0000
+Z Rotation         :    0  0 00.0000
+Map Projection Parameters
+Projection Type  : UTM Zone 11
+CM W117 00.0000
+Lat Origin: N00 00.0000
+False N:0.000m E:500000.000m:
+S F at CM: 0.9996000000
+Units: Meters
+Units
+Distance Units    : meters
+WayPoint Units    : meters
+Survey Line Units : meters
+Speed    Units    : kts
+Lat/Long Style    : Deg Min 
+Default Lat Hem   : North
+Default Lon Hem   : West
+Default Entry     : Geog
+Default Dist Calc : True
+Project Directory : C:\NavData\15-160A\
+Final Directory : C:\NavData\15-160A\
+Telemetry Directory : C:\NavData\15-160A\
+Chart   Directory : 
+Company Name : NOAA/NMFS/SWFSC
+Project Number : 
+Project Description : ROV Survey of White Abalone at Palos Verdes
+Survey Area : SWFSC
+Start Date of Survey (YYYYMMDD) : 20150609
+End Date of Survey (YYYYMMDD) : 20150611
+Client : 
+Positioning Contractor : 
+Client Representative : 
+Survey Representative : 
+Party Chief : 
+Surveyor : 
+Project Name : 
+Geophysical Contractor : 
+Processing Contractor : 
+Date of media issue (YYYYMMDD) : 
+Media Label : 
+Media Prepared By : 
+Positioning Systems : 
+Mapped Position : 
+Offset to Mapped Position : 
+Post-plot Date of Issue : 
+Recording Instrument Name : 
+Recording Instrument Transfer Method : 
+Rcvr Groups per Shot : 
+Vert Datum Name : 
+Vert Datum Origin : 
+Survey Line Doc. C:\NavData\15-160A\surline.PTS
+Waypoint Doc. C:\NavData\15-160A\waypoint.WPT
+Picture Doc. C:\NavData\15-160A\picture.PIC
+Receiver Doc. C:\NavData\15-160A\receivers.ALL
+Sources Doc. C:\NavData\15-160A\sources.ASC
+Logs Doc. C:\NavData\15-160A\data.ALG
+Manual Logs Doc. C:\NavData\15-160A\logs.LOG
+Vehicle    : HDHV
+Vehicle Event Generation : Event Primary
+Vehicle    : HDHV
+Vehicle Height : 0.0
+Vehicle Data Source  : Real Time
+Vehicle Kalman Filter : Off Acc. Noise 0.05
+Vehicle Dead Reckoning: On
+Vehicle Velocity Filter: 34
+Vehicle Range Gate     : Off Size 10.0
+Vehicle Heading Calc.   : Off
+Vehicle Streamer Calc.   : Off
+Vehicle Telemetry Code   : 0
+Vehicle Devices
+USBL,USBL,BEACON,1
+SPEED LOG,DVL,SPEED LOG
+SPEED LOG,DVL,HEADING
+SPEED LOG,DVL,ELEVATION,1
+SPEED LOG,DVL,ATTITUDE
+SPEED LOG,DVL,ROVDATA
+ROV,CTD,ROVDATA
+OUTPUT,WinFrog to OSD,DATA OUTPUT
+OUTPUT,ROV POS to Sonar,DATA OUTPUT
+OUTPUT,ROV HDG to Sonar,DATA OUTPUT
+GENERIC,Control System to WinFrog,ROVDATA
+GENERIC,Control System to WinFrog,HEADING
+GENERIC,Control System to WinFrog,ATTITUDE
+Vehicle    : HDHV
+Vehicle Config Offset : On Use Heading
+Vehicle Offset : Beacon Dx 0.00 Dy 0.00 Dz 0.00 Plot 1
+Vehicle Event Generation : HDHV
+Event Raw Data Recording : At Events Pos. Logging 0.0 sec
+Event Start           : Off
+Event Record Type     : Data Logging
+Event Trigger         : On Time Interval 2.00 Delay 0.0 
+Event Multiple        : Event 1 Plot 0 Print 0
+Event Number Control : Event No. from Line
+Vehicle    : Outer Limits
+Vehicle Event Generation : Event Secondary
+Vehicle    : Outer Limits
+Vehicle Height : 0.0
+Vehicle Data Source  : Real Time
+Vehicle Kalman Filter : On Acc. Noise 0.10
+Vehicle Dead Reckoning: Off
+Vehicle Velocity Filter: 20
+Vehicle Range Gate     : Off Size 100.0
+Vehicle Heading Calc.   : Off
+Vehicle Streamer Calc.   : Off
+Vehicle Telemetry Code   : 0
+Vehicle Devices
+USBL,USBL,USBL HYDROPHONE
+GPS,CSI,POSITION
+GYRO,TSS,HEADING
+SOUNDER,Sounder,BOTTOMDEPTH
+OUTPUT,GPS to Control System,DATA OUTPUT
+OUTPUT,GPS to USBL,DATA OUTPUT
+OUTPUT,NAV to GIS,DATA OUTPUT
+Vehicle    : Outer Limits
+Vehicle Config Offset : On Use Heading
+Vehicle Offset : Hydro Dx 3.20 Dy -1.20 Dz -2.17 Plot 1
+Vehicle Event Generation : Outer Limits
+Event Raw Data Recording : At Events Pos. Logging 0.0 sec
+Event Start           : Off
+Event Record Type     : Data Logging
+Event Trigger         : On Time Interval 10.00 Delay 0.0 
+Event Multiple        : Event 1 Plot 0 Print 0
+Event Number Control : Event No. from Line
+Vehicle    : Clump
+Vehicle Event Generation : Event Secondary
+Vehicle    : Clump
+Vehicle Height : 0.0
+Vehicle Data Source  : Real Time
+Vehicle Kalman Filter : On Acc. Noise 0.08
+Vehicle Dead Reckoning: On
+Vehicle Velocity Filter: 34
+Vehicle Range Gate     : Off Size 10.0
+Vehicle Heading Calc.   : Off
+Vehicle Streamer Calc.   : Off
+Vehicle Telemetry Code   : 0
+Vehicle Devices
+USBL,USBL,BEACON,9
+OUTPUT,WinFrog to OSD-Clump,DATA OUTPUT
+Vehicle Event Generation : Clump
+Event Raw Data Recording : At Events Pos. Logging 0.0 sec
+Event Start           : Off
+Event Record Type     : Data Logging
+Event Trigger         : On Time Interval 10.00 Delay 0.0 
+Event Multiple        : Event 1 Plot 0 Print 0
+Event Number Control : Event No. from Line
+Devices  
+Device1 USBL,TRACKPOINT,USBL,0,NONE,1,0,COM4,9600L,8,N,110{20000.000000*1*0}
+Device2 GPS,NMEA GPS,CSI,2,TCPIP,127.0.0.1,21,0,20000.000000,1,0,,**NmeaInCtrlCfg,1,1,DATUM0,**AlCtrlCfg,0,0,-1,0,0,**HdgSrcCfg,1,0,**AttdSrcCfg,1,0,COM5,9600L,8,N,136{20000.000000*1*0}
+Device3 GYRO,NMEA GYRO,TSS,2,TCPIP,127.0.0.1,10012,0,20000.000000,1,60000,COM6,9600L,8,N,136{20000.000000*1*0}
+Device4 SOUNDER, NMEA DEPTH,Sounder,2,COM7,4800L,8,N,136{20000.000000*1*0}
+Device5 SPEED LOG,RDI,DVL,1.000000,1.000000,1.000000,COM9,9600L,8,N,110{20000.000000*1*0}
+Device6 ROV,Micro CTD,CTD,1,1,1,1,1,1,1,1,1,m,4095.00000000,0.00000000,100.00000000,0.00000000,0.00000000,1,1,2,µ moles,4095.00000000,0.00000000,500.00000000,0.00000000,0.00000000,0,0,0,,4095.00000000,0.00000000,0.00000000,0.00000000,0.00000000,0,0,0,,4095.00000000,0.00000000,0.00000000,0.00000000,0.00000000,0,0,0,,4095.00000000,0.00000000,0.00000000,0.00000000,0.00000000,0,0,0,,4095.00000000,0.00000000,0.00000000,0.00000000,0.00000000,6,2,2,1026.000,30.000,0.000,2,COM10,9600L,8,N,110{20000.000000*1*0}
+Device7 OUTPUT,GENERIC OUTPUT,WinFrog to OSD,Version=2,0,~{~~}~,0,0,0,0,0,0,0,0,0,1,1.0,0,1,14,13,3,5,6,7,15,16,17,19,31,32,0,1,-1,0,COM11,9600L,8,N,110{20000.000000*1*0}
+Device8 OUTPUT,NMEAOUT,ROV POS to Sonar,2,TCPIP,127.0.0.1,21,0,20000.000000,1,60000,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0,NONE,0,0,0,0,0,0,COM12,9600L,8,N,110{20000.000000*1*0}
+Device9 OUTPUT,NMEAOUT,ROV HDG to Sonar,2,TCPIP,127.0.0.1,21,0,20000.000000,1,60000,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0,NONE,0,0,0,0,0,0,COM13,4800L,8,N,110{20000.000000*1*0}
+Device10 OUTPUT,NMEAOUT,GPS to Control System,2,TCPIP,127.0.0.1,21,0,20000.000000,1,60000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,1,0,0,0,0,0,1,0,0,0,NONE,0,0,0,0,0,0,COM14,9600L,8,N,110{20000.000000*1*0}
+Device11 GENERIC,GENERIC,Control System to WinFrog,Version=4,0,,2,50,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,21,0,0,0,0,38,44,0,8,0,0,0,0,0,23,0,0,0,0,40,46,0,12,0,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000,0,1.000000,0,0,1.000000,0,0,1.000000,0,0,1.000000,0,0,1.000000,0,0,1.000000,0,0,0,0,0,0,1.000000,0.000,1.000000,1.000000,0,0,1.000000,0,0,1.000000,0,0,1,1,1,0,0,0,0,20,6,17,18,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,1,0,1,1.000000,0,0,1.000000,0,0,1.000000,0,0,1.000000,0.000,0,0,1.000000,0,0,1.000000,0,0,2.00,0.00,10.00,60.00,1.00000,0,0,2.00,0.00,10.00,60.00,1.00000,0,0,COM15,9600L,8,N,110{20000.000000*1*0}
+Device12 OUTPUT,GENERIC OUTPUT,WinFrog to OSD-Clump,Version=2,0,~{~~}~,0,0,0,0,0,0,0,0,0,1,1.0,0,1,14,13,3,5,6,7,15,16,17,19,31,32,0,1,-1,0,COM16,9600L,8,N,110{20000.000000*1*0}
+Device13 OUTPUT,NMEAOUT,GPS to USBL,2,TCPIP,127.0.0.1,21,0,20000.000000,1,60000,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0,NONE,0,0,0,0,0,1,COM17,9600L,8,N,110{20000.000000*1*0}
+Device14 OUTPUT,NMEAOUT,NAV to GIS,2,TCPIP,127.0.0.1,21,0,20000.000000,1,60000,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0,NONE,0,0,0,0,0,0,COM19,9600L,8,N,110{20000.000000*1*0}
+June 9, 2015 13:23:20
+Vehicle Event Generation : HDHV
+Event Raw Data Recording : At Events Pos. Logging 0.0 sec
+Event Start           : Off
+Event Record Type     : Data Logging
+Event Trigger         : On Time Interval 2.00 Delay 0.0 
+Event Multiple        : Event 1 Plot 0 Print 0
+Event Number Control : Event No. from Line
+June 9, 2015 13:23:56
+Vehicle Event Generation : HDHV
+Event Raw Data Recording : At Events Pos. Logging 0.0 sec
+Event Start           : Manual Start
+Event Record Type     : Data Logging
+Event Trigger         : On Time Interval 2.00 Delay 0.0 
+Event Multiple        : Event 1 Plot 0 Print 0
+Event Number Control : Event No. from Line
+June 9, 2015 15:00:13
+Vehicle 0 Event Start
+June 9, 2015 15:41:06
+Vehicle 0 Event Stop

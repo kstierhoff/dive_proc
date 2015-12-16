@@ -1,0 +1,1 @@
+Paste these test directories into the C:/PHOTOS directory on the local machine.

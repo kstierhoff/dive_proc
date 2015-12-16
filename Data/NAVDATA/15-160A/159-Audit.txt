@@ -1,0 +1,32 @@
+Survey Line Doc. C:\NavData\15-160A\surline.PTS
+Waypoint Doc. C:\NavData\15-160A\waypoint.WPT
+Picture Doc. C:\NavData\15-160A\picture.PIC
+Receiver Doc. C:\NavData\15-160A\receivers.ALL
+Sources Doc. C:\NavData\15-160A\sources.ASC
+Logs Doc. C:\NavData\15-160A\data.ALG
+Manual Logs Doc. C:\NavData\15-160A\logs.LOG
+June 8, 2015 21:18:06
+Geodetic Parameters
+Ellipsoid Parameters
+Ellipse Name         : WGS84
+Datum Name         : WGS84
+Semi-Major Axis    : 6378137.00m
+Inverse Flattening : 298.257223600
+Datum Transformation Method: Bursa-Wolf (7 param.)
+Datum Transformation Parameters
+X Datum Shift      : 0.00m
+Y Datum Shift      : 0.00m
+Z Datum Shift      : 0.00m
+Scale Factor       : 0.0000000000
+X Rotation         :    0  0 00.0000
+Y Rotation         :    0  0 00.0000
+Z Rotation         :    0  0 00.0000
+Map Projection Parameters
+Projection Type  : UTM Zone 11
+CM W117 00.0000
+Lat Origin: N00 00.0000
+False N:0.000m E:500000.000m:
+S F at CM: 0.9996000000
+Units: Meters
+June 8, 2015 22:23:28 : Session ended
+Configuration file C:\NavData\15-155A\15-155A.cfg

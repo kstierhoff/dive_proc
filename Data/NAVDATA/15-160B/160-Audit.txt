@@ -1,0 +1,42 @@
+Survey Line Doc. C:\NavData\15-160B\surline.PTS
+Waypoint Doc. C:\NavData\15-160B\waypoint.WPT
+Picture Doc. C:\NavData\15-160B\picture.PIC
+Receiver Doc. C:\NavData\15-160B\receivers.ALL
+Sources Doc. C:\NavData\15-160B\sources.ASC
+Logs Doc. C:\NavData\15-160B\data.ALG
+Manual Logs Doc. C:\NavData\15-160B\logs.LOG
+June 9, 2015 15:44:58
+Geodetic Parameters
+Ellipsoid Parameters
+Ellipse Name         : WGS84
+Datum Name         : WGS84
+Semi-Major Axis    : 6378137.00m
+Inverse Flattening : 298.257223600
+Datum Transformation Method: Bursa-Wolf (7 param.)
+Datum Transformation Parameters
+X Datum Shift      : 0.00m
+Y Datum Shift      : 0.00m
+Z Datum Shift      : 0.00m
+Scale Factor       : 0.0000000000
+X Rotation         :    0  0 00.0000
+Y Rotation         :    0  0 00.0000
+Z Rotation         :    0  0 00.0000
+Map Projection Parameters
+Projection Type  : UTM Zone 11
+CM W117 00.0000
+Lat Origin: N00 00.0000
+False N:0.000m E:500000.000m:
+S F at CM: 0.9996000000
+Units: Meters
+June 9, 2015 15:45:31
+Vehicle Event Generation : HDHV
+Event Raw Data Recording : At Events Pos. Logging 0.0 sec
+Event Start           : Manual Start
+Event Record Type     : Data Logging
+Event Trigger         : On Time Interval 2.00 Delay 0.0 
+Event Multiple        : Event 1 Plot 0 Print 0
+Event Number Control : Event No. from Line
+June 9, 2015 16:32:46
+Vehicle 0 Event Start
+June 9, 2015 16:55:13
+Vehicle 0 Event Stop
