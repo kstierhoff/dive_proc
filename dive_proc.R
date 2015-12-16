@@ -10,15 +10,15 @@ rm(list=ls())
 Sys.setenv(TZ="GMT")
 # load libraries
 library(RODBC);library(reshape2);library(plyr);library(ggplot2);library(forecast);
-library(stringr);library(surveyR);library(vegan);library(scales);library(grid);library(gridExtra);
+library(stringr);library(surveyR);library(scales);library(grid);library(gridExtra);
 
 # You are about to process DAT, LOG, CTD and PHOTO data for a series of ROV transects
 # You will need to supply some information below
 
 # User-defined variables ####
 # Enter the directory of the ROV database
-db.dir <- "C:/Users/ROV_LAB/Desktop/White Abalone 2015/ROV_AtSea_20150605.accdb"  # on ROV laptop
-# db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb"  # on KLS desktop
+# db.dir <- "C:/Users/ROV_LAB/Desktop/White Abalone 2015/ROV_AtSea_20150605.accdb"  # on ROV laptop
+db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb"  # on KLS desktop
 # Enter the start and end dive names (if only processing one dive, make these the same)
 start.dir 	<- "15-160A"
 end.dir 	<- "15-160B"
@@ -31,8 +31,8 @@ ROV <- "HDHV"
 timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add date/time)
 nav.smoother <- 15
 # path to R processing code
-proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
-# proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
+# proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
+proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
 
 # Query starting IDs for all database tables ####
 channel <- odbcConnectAccess2007(db.dir)
@@ -111,10 +111,10 @@ for (i in dir.list){
   time.int <- c(time.int,0)
   # calculate ship distances (m)
   DAT$disp.s <- DAT$speed.s * 0.514444444 * time.int
-  DAT$disp.s.total <- cumsum(DAT$disp.s)
+  DAT$disp.s.cum <- cumsum(DAT$disp.s)
   # calculate ROV distances (m)
   DAT$disp.r <- DAT$speed.r * 0.514444444 * time.int
-  DAT$disp.r.total <- cumsum(DAT$disp.r)
+  DAT$disp.r.cum <- cumsum(DAT$disp.r)
   
   # Add DVL pitch/roll to position sensor to get the actual pitch/roll of the camera ####
   # get directory of WinFrog RAW files to read
@@ -184,14 +184,15 @@ for (i in dir.list){
   
   # Select nav data for database export ####
   DAT.output <- DAT[ ,c("nid","oid","dive.name","date.time",
-                        "lat.s","lon.s","n.s","e.s","hdg.s","cmg.s","speed.s","disp.s","disp.s.total","lat.r","lon.r","depth.r","n.r","e.r","hdg.r","cmg.r","speed.r",
-                        "pitch","roll","temp","cond","press","sal","sound.vel","oxy.conc","oxy.sat","alt","disp.r","disp.r.total","area","cum_area",
-                        "camera_alt","slant_range","center_width")]
+                        "lat.s","lon.s","n.s","e.s","hdg.s","cmg.s","speed.s","disp.s","disp.s.cum","lat.r","lon.r","depth.r",
+                        "n.r","e.r","hdg.r","cmg.r","speed.r","pitch","roll","temp","cond","press","sal","sound.vel",
+                        "oxy.conc","oxy.sat","alt","disp.r","disp.r.cum",
+                        "camera_alt","slant_range","center_width","area","cum_area")]
   names(DAT.output) <- c("nav_id","object_id","dive_name","date_time",
-                         "lat_dd_s","lon_dd_s","northing_s","easting_s","heading_s","cmg_s","speed_s","disp_s","total_disp_s","lat_dd_r","lon_dd_r","depth_r",
+                       "lat_dd_s","lon_dd_s","northing_s","easting_s","heading_s","cmg_s","speed_s","disp_s","cum_disp_s","lat_dd_r","lon_dd_r","depth_r",
                          "northing_r","easting_r","heading_r","cmg_r","speed_r","pitch","roll","temperature","conductivity","pressure","salinity","sound_vel",
-                         "oxygen_conc","oxygen_sat","altitude","disp_r","cum_disp_r","area_r","cum_area_r",
-                         "camera_altitude","slant_range","center_width")
+                         "oxygen_conc","oxygen_sat","altitude","disp_r","cum_disp_r",
+                         "camera_altitude","slant_range","center_width","area_r","cum_area_r")
   # save Rdata file
   save(DAT,file=file.path(i,paste(dive.name,"DAT.Rdata",sep="_")))
   
@@ -224,9 +225,12 @@ for (i in dir.list){
   ctd.gg 	<- melt(DAT[ ,c("date.time","depth.r","depth.msw","sal","cond","temp","press",
                           "sound.vel","oxy.conc","oxy.sat")],id=c("date.time"))
   ctd.p 	<- ggplot(ctd.gg,aes(x=date.time,y=value,group=variable)) + 
-    geom_line(colour="blue") + facet_wrap(~variable, scales="free") + theme_bw() + 
-    labs(title = paste("CTD Data from transect ",dive.name,"\n",sep="")) + xlab("\nDate/time (GMT)") + ylab("Sensor value\n") +
-    scale_x_datetime()
+    geom_line(colour="blue") + scale_x_datetime() + facet_wrap(~variable, scales="free") + 
+    labs(title = paste("CTD Data from transect ",dive.name,"\n",sep="")) + xlab("\nTime of Day (GMT)") + ylab("Sensor Value\n") +
+    theme_bw() +
+    theme(strip.text.x = element_text(size=12, face="bold"),
+          strip.background = element_rect(fill="white"),
+          panel.margin = unit(1, "lines"))
   ggsave(ctd.p,filename = file.path(i,paste(dive.name,"PhysData.png",sep="_")),height=9.8,width=13.3,units="in")
   
   # Plot results from center width and area calculations ####
@@ -234,22 +238,22 @@ for (i in dir.list){
   p.gg	<- melt(DAT[ ,c("date.time","pitch","pitch_sm")],id=c("date.time"))
   p.p	<- ggplot(p.gg,aes(x=date.time,y=value,colour=variable)) + 
     geom_line() + theme_bw() + labs(title = paste("ROV data from ",dive.name,"\n",sep="")) +
-    xlab("") + ylab("Pitch (degrees)\n") + scale_x_datetime() + scale_colour_manual(values=c("black","green"))
+    xlab("") + ylab("Pitch (degrees)\n") + scale_x_datetime() + scale_colour_manual("Pitch",values=c("black","green"))
   # plot roll data
   r.gg	<- melt(DAT[ ,c("date.time","roll","roll_sm")],id=c("date.time"))
   r.p	<- ggplot(r.gg,aes(x=date.time,y=value,colour=variable)) + 
     geom_line() + theme_bw() + 
-    xlab("") + ylab("Roll (degrees)\n") + scale_x_datetime() + scale_colour_manual(values=c("black","blue"))
+    xlab("") + ylab("Roll (degrees)\n") + scale_x_datetime() + scale_colour_manual("Roll",values=c("black","blue"))
   # plot altitude data
   a.gg	<- melt(DAT[ ,c("date.time","alt","alt_sm","camera_alt")],id=c("date.time"))
   a.p	<- ggplot(a.gg,aes(x=date.time,y=value,colour=variable)) + 
     geom_line() + theme_bw() + 
-    xlab("") + ylab("Altitude (meters)\n") + scale_x_datetime() + scale_colour_manual(values=c("black","red","blue"))
+    xlab("") + ylab("Altitude (meters)\n") + scale_x_datetime() + scale_colour_manual("Altitude",values=c("black","red","blue"))
   # plot of ROV depth and altitude data
   z.gg	<- melt(DAT[ ,c("date.time","depth.r","depth.msw")],id=c("date.time"))
   z.p		<- ggplot(z.gg,aes(x=date.time,y=value,colour=variable)) + 
-    geom_line() + theme_bw() + scale_colour_manual(values=c("green","black")) + 
-    xlab("\nDate/time") + ylab("Depth (m)\n") +	scale_x_datetime()
+    geom_line() + theme_bw() + scale_colour_manual("Depth",values=c("green","black")) + 
+    xlab("\nTime of Day") + ylab("Depth (m)\n") +	scale_x_datetime()
 
   # save plot of pitch, roll, and altitude plot	  
   png(file=file.path(i,paste(dive.name,"NavData.png",sep="_")),w=1800,h=1500, res=150)
@@ -261,7 +265,7 @@ for (i in dir.list){
   width.df$date_time <- DAT$date.time
   w.gg <-  melt(width.df,id=c("date_time"))
   w.p <- ggplot(w.gg,aes(x=date_time,y=value,colour=variable)) + 
-    geom_line() + theme_bw() + scale_colour_manual(values=c("green","black","blue")) + 
+    geom_line() + theme_bw() + scale_colour_manual("Variable",values=c("green","black","blue")) + 
     xlab("\nDate/time") + ylab("Variable (m)\n") +	scale_x_datetime() +	
     labs(title = paste("Camera data from ",dive.name,"\n",sep=""))
   ggsave(w.p,filename = file.path(i,paste(dive.name,"CameraData.png",sep="_")),height=5,width=10,units="in")
@@ -276,7 +280,7 @@ for (i in dir.list){
   ll.gg	<- rbind(ship,rov)
   ll.p	<- ggplot(ll.gg,aes(x=lon,y=lat,colour = vessel)) +
     geom_path() + theme_bw() + labs(title = paste("Lat/Lon data from ",dive.name,"\n",sep="")) +
-    xlab("\nLongitude") + ylab("Latitude\n") + scale_colour_manual(values=c("blue","green"))
+    xlab("\nLongitude") + ylab("Latitude\n") + scale_colour_manual("Vessel",values=c("green","black"))
   ggsave(ll.p,filename = file.path(i,paste(dive.name,"LatLonData.png",sep="_")))
   
   # Process WinFrog events from LOG file ####
@@ -453,15 +457,16 @@ for (i in dir.list){
         
         # plot data from each CTD cast
         CTD.gg <- CTD[ ,c("oid","temp","sal","oxy.conc","sound.vel","depth.r")]
-        names(CTD.gg) <- c("oid","Temperature","Salinity","Oxygen Concentration","Sound Velocity","depth.r")
-        CTD.gg <- melt(CTD.gg,id=c("oid","depth.r"))
-        ctd <- ggplot(CTD.gg,aes(x = value,y = depth.r,colour = variable)) +
+        names(CTD.gg) <- c("oid","Temperature (C)","Salinity (PSU)","Oxygen Concentration (uMol)","Sound Velocity (m/s)","Depth")
+        CTD.gg <- melt(CTD.gg,id=c("oid","Depth"))
+        ctd <- ggplot(CTD.gg,aes(x = value,y = Depth,colour = variable)) +
           geom_path() + facet_wrap(~variable, nrow=1, scales = "free_x") + 
-          scale_y_continuous("Depth (m)\n",lim=c(min(CTD$depth.r),0),expand=c(0,0)) + xlab("\nSensor value") + theme_bw() +
+          scale_y_continuous("Depth (m)\n",lim=c(min(CTD.gg$Depth),0),expand=c(0,0)) + xlab("\nSensor Value") + theme_bw() +
           theme(legend.position = "none",
                 strip.text.x = element_text(size=12, face="bold"),
-                strip.background = element_rect(fill="white")) + 
-          ggtitle(paste("Profile for",CTD.name,"\n"))
+                strip.background = element_rect(fill="white"),
+                panel.margin = unit(1, "lines")) + 
+          ggtitle(paste("CTD profile for",CTD.name,"\n"))
         ggsave(ctd,filename = file.path(i,paste(CTD.name,".png",sep="")),height=9.8,width=13.3,units="in")
       }
     }
@@ -514,8 +519,8 @@ if(dim(LOG.temp)[1] > 0){
   write.csv(LOG.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"DiveEvents.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="")
 }
 # Write CTD data for all dives to text file
-if(length(CTD.dir) > 0){
-  write.csv(CTD.temp,file=paste(start.dir,end.dir,"CTDCasts.txt", sep = "_"),row.names = FALSE,quote=FALSE)
+if(dim(CTD.temp)[1] > 0){
+  write.csv(CTD.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"CTDCasts.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="")
 }
 
 # Report new indices for next dive ####
