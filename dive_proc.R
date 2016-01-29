@@ -17,12 +17,12 @@ library(stringr);library(surveyR);library(scales);library(grid);library(gridExtr
 
 # User-defined variables ####
 # Enter the directory of the ROV database
-db.dir <- "C:/Users/ROV_LAB/Desktop/White Abalone 2015/ROV_AtSea_20150605.accdb"  # on ROV laptop
-# db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb"  # on KLS desktop
+# db.dir <- "C:/Users/ROV_LAB/Desktop/White Abalone 2015/ROV_AtSea_20150605.accdb"  # on ROV laptop
+db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb"  # on KLS desktop
 
 # Enter the start and end dive names (if only processing one dive, make these the same)
 start.dir 	<- "15-160A"
-end.dir 	<- "15-160B"
+end.dir 	<- "16-021B"
 # Is the CTD present (this will almost always be TRUE)
 ctd.on <- TRUE
 # Which ROV was used (e.g., HDHV or Phantom)
@@ -32,8 +32,8 @@ ROV <- "HDHV"
 timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add date/time)
 nav.smoother <- 15
 # path to R processing code
-proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
-# proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
+# proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
+proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
 
 # Query starting IDs for all database tables ####
 channel <- odbcConnectAccess2007(db.dir)
@@ -78,9 +78,15 @@ for (i in dir.list){
   invisible(file.copy(proc.file,i,overwrite = TRUE))
   # extract dive name from directory path
   dive.name <- 	str_extract(i,'\\d{2}-\\d{3}\\w')
-  # read DAT file
-  dat.file <- list.files(i,pattern='\\d{2}-\\d{3}\\w\\.DAT',full.names=TRUE)
-  DAT <- read.csv(dat.file,header=FALSE)
+  # list DAT files in directory
+  dat.files <- list.files(i,pattern='\\d{2}-\\d{3}\\w{1}(\\(\\d{3}-\\d{6}\\))?.DAT',full.names=TRUE)
+  DAT <- data.frame()
+  for(ii in dat.files){
+    # read DAT file and append to previous
+    dat <- read.csv(ii,header=FALSE)
+    DAT <- rbind(DAT,dat)
+  }
+  # subset columns
   DAT <- DAT[ ,c(1:47,65)]
   # add variable names to data frame
   names(DAT) <- c("oid","blank","date.time","lat.r","lon.r","depth.r","n.r","e.r","blank","blank","blank","hdg.r","cmg.r","speed.r",
@@ -194,9 +200,7 @@ for (i in dir.list){
                          "northing_r","easting_r","heading_r","cmg_r","speed_r","pitch","roll","temperature","conductivity","pressure","salinity","sound_vel",
                          "oxygen_conc","oxygen_sat","altitude","disp_r","cum_disp_r",
                          "camera_altitude","slant_range","center_width","area_r","cum_area_r")
-  # save Rdata file
-  save(DAT,file=file.path(i,paste(dive.name,"DAT.Rdata",sep="_")))
-  
+
   # write DAT data frame to CSV file for import into the database
   DAT.write <- DAT.output
   DAT.write$date_time <- format(DAT.write$date_time,format="%m/%d/%Y %H:%M:%S")
@@ -324,8 +328,6 @@ for (i in dir.list){
     LOG.write$date_time <- format(LOG.output$date_time,format="%m/%d/%Y %H:%M:%S")
     # write dive events to text file
     write.csv(LOG.write,file=file.path(i,paste(dive.name,"DiveEvents.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="")
-    # save Rdata file
-    save(LOG,file=file.path(i,paste(dive.name,"LOG.Rdata",sep="_")))
     # add results to LOG.temp
     LOG.temp <- rbind(LOG.temp,LOG.write)
   }
@@ -377,8 +379,6 @@ for (i in dir.list){
     # format date/time to a database compatible format
     PHOTO.write$date_time <- format(PHOTO.output$date_time,format="%m/%d/%Y %H:%M:%S")
     write.csv(PHOTO.write,	file = file.path(i,paste(dive.name,"_PhotoInfo.txt",sep = "")),quote = FALSE,row.names = FALSE,na = "")
-    # write PHOTO to Rdata file
-    save(PHOTO,file=file.path(i,paste(dive.name,"PHOTO.Rdata",sep="_")))
     # add results to PHOTO.temp
     PHOTO.temp <- rbind(PHOTO.temp,PHOTO.write)
   } else {
@@ -386,8 +386,8 @@ for (i in dir.list){
   }
   
   # Process CTD cast data ####
-  CTD.dir <- list.files(i,pattern='\\d{2}-\\d{3}\\w{1}_(CTD.).DAT',full.names=TRUE)
-  
+  # list CTD files in directory
+  CTD.dir <- list.files(i,pattern='\\d{2}-\\d{3}\\w{1}_(CTD.)(\\(\\d{3}-\\d{6}\\))?.DAT',full.names=TRUE)
   if(length(CTD.dir)==0){
     # If no CTD files are present, do nothing
     cat(paste("No CTD casts to process for",dive.name,".\n"))
@@ -449,8 +449,6 @@ for (i in dir.list){
         CTD.output$date_time <- format(CTD.output$date_time,format="%m/%d/%Y %H:%M:%S")
         # save CTD results to file					
         write.csv(CTD.output,file = file.path(i,paste(CTD.name,".txt",sep="")),quote=FALSE, row.names=FALSE)
-        # save Rdata file
-        save(CTD,file=file.path(i,paste(CTD.name,".Rdata",sep="")))
         # add CTD results to CTD.temp
         CTD.temp <- rbind(CTD.temp,CTD.output)
         # increment CTD ID by one for next cast
