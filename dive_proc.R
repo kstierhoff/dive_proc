@@ -3,6 +3,11 @@
 
 # Kevin L. Stierhoff
 
+# TO DO:
+# filter/smooth CTD data
+# Check smoothing/filtering of other data used in width calculations
+# fix width and area estimates for pitch > 0. Set to NA?
+
 # Script setup #####
 # clear system memory
 rm(list=ls())
@@ -17,12 +22,12 @@ library(stringr);library(surveyR);library(scales);library(grid);library(gridExtr
 
 # User-defined variables ####
 # Enter the directory of the ROV database
-# db.dir <- "C:/Users/ROV_LAB/Desktop/White Abalone 2015/ROV_AtSea_20150605.accdb"  # on ROV laptop
-db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb"  # on KLS desktop
+db.dir <- "C:/Users/ROV_LAB/Desktop/SCI_Abalone_2016/ROV_atsea_20151216.accdb"  # on ROV laptop
+# db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb"  # on KLS desktop
 
 # Enter the start and end dive names (if only processing one dive, make these the same)
-start.dir 	<- "15-160A"
-end.dir 	<- "16-021B"
+start.dir 	<- "16-048B"
+end.dir 	<- "16-048D"
 # Is the CTD present (this will almost always be TRUE)
 ctd.on <- TRUE
 # Which ROV was used (e.g., HDHV or Phantom)
@@ -32,8 +37,8 @@ ROV <- "HDHV"
 timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add date/time)
 nav.smoother <- 15
 # path to R processing code
-# proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
-proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
+proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
+# proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
 
 # Query starting IDs for all database tables ####
 channel <- odbcConnectAccess2007(db.dir)
@@ -172,12 +177,27 @@ for (i in dir.list){
 
   # Smooth ROV roll, pitch and altitude for width/area calculations ####
   # replace NAs with raw (unsmoothed) data
+  # set negative (bad) altitude data to NA
+  DAT$alt[which(DAT$alt<0)] <- NA
+  # use linear interpolation to replace NAs
+  DAT$alt <- as.numeric(na.interp(DAT$alt))
+  # smooth altitude data
   DAT$alt_sm <- ma(DAT$alt,order=nav.smoother)
+  # replace NA data with non-smoothed data
   isna <- which(is.na(DAT$alt_sm)==TRUE)
   DAT$alt_sm[isna] <- DAT$alt[isna]
+  # smooth pitch data
+  # set negative (bad) altitude data to NA
+  DAT$pitch[which(DAT$pitch>0)] <- NA
+  # use linear interpolation to replace NAs
+  DAT$pitch <- as.numeric(na.interp(DAT$pitch))
   DAT$pitch_sm <- ma(DAT$pitch,order=nav.smoother)
+  # replace NAs with non-smoothed data
   DAT$pitch_sm[isna] <- DAT$pitch[isna]
+  DAT$pitch[which(DAT$pitch>0)] <- NA
+  # smooth roll data
   DAT$roll_sm <- ma(DAT$roll,order=nav.smoother)
+  # replace NAs with non-smoothed data
   DAT$roll_sm[isna] <- DAT$roll[isna]
   
   # Calculate width and area ####
@@ -284,7 +304,7 @@ for (i in dir.list){
   names(rov) <- c("lat","lon","vessel")
   ll.gg	<- rbind(ship,rov)
   ll.p	<- ggplot(ll.gg,aes(x=lon,y=lat,colour = vessel)) +
-    geom_path() + theme_bw() + labs(title = paste("Lat/Lon data from ",dive.name,"\n",sep="")) +
+    geom_path() + coord_map() + theme_bw() + labs(title = paste("Lat/Lon data from ",dive.name,"\n",sep="")) +
     xlab("\nLongitude") + ylab("Latitude\n") + scale_colour_manual("Vessel",values=c("green","black"))
   ggsave(ll.p,filename = file.path(i,paste(dive.name,"LatLonData.png",sep="_")))
   
@@ -390,7 +410,7 @@ for (i in dir.list){
   CTD.dir <- list.files(i,pattern='\\d{2}-\\d{3}\\w{1}_(CTD.)(\\(\\d{3}-\\d{6}\\))?.DAT',full.names=TRUE)
   if(length(CTD.dir)==0){
     # If no CTD files are present, do nothing
-    cat(paste("No CTD casts to process for",dive.name,".\n"))
+    cat(paste("No CTD casts to process for ",dive.name,".\n",sep=""))
   } else {
     # else process each CTD file
     for (ii in CTD.dir){
@@ -521,6 +541,13 @@ if(dim(LOG.temp)[1] > 0){
 if(dim(CTD.temp)[1] > 0){
   write.csv(CTD.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"CTDCasts.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="")
 }
+
+# Copy plots to Results directory
+file.copy(list.files(pattern="*CameraData.png","C:/NAVDATA",recursive = TRUE,full.names = TRUE),file.path(dat.root,"_Results","CameraData"))
+file.copy(list.files(pattern="*PhysData.png","C:/NAVDATA",recursive = TRUE,full.names = TRUE),file.path(dat.root,"_Results","PhysData"))
+file.copy(list.files(pattern="*NavData.png","C:/NAVDATA",recursive = TRUE,full.names = TRUE),file.path(dat.root,"_Results","NavData"))
+file.copy(list.files(pattern="*CTD..png","C:/NAVDATA",recursive = TRUE,full.names = TRUE),file.path(dat.root,"_Results","cTD_Casts"))
+file.copy(list.files(pattern="*LatLonData.png","C:/NAVDATA",recursive = TRUE,full.names = TRUE),file.path(dat.root,"_Results","LatLonData"))
 
 # Report new indices for next dive ####
 cat(paste("Finished processing dives",start.dir,"to",end.dir,"\n", sep=" "),
