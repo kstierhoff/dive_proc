@@ -22,11 +22,11 @@ library(stringr);library(surveyR);library(scales);library(grid);library(gridExtr
 
 # User-defined variables ####
 # Enter the directory of the ROV database
-db.dir <- "C:/Users/ROV_LAB/Desktop/SCI_Abalone_2016/ROV_atsea_20151216.accdb"  # on ROV laptop
-# db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb"  # on KLS desktop
+# db.dir <- "C:/Users/ROV_LAB/Desktop/SCI_Abalone_2016/ROV_atsea_20151216.accdb"  # on ROV laptop
+db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb"  # on KLS desktop
 
 # Enter the start and end dive names (if only processing one dive, make these the same)
-start.dir 	<- "16-048B"
+start.dir 	<- "16-034A"
 end.dir 	<- "16-048D"
 # Is the CTD present (this will almost always be TRUE)
 ctd.on <- TRUE
@@ -37,8 +37,8 @@ ROV <- "HDHV"
 timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add date/time)
 nav.smoother <- 15
 # path to R processing code
-proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
-# proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
+# proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
+proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
 
 # Query starting IDs for all database tables ####
 channel <- odbcConnectAccess2007(db.dir)
@@ -188,7 +188,7 @@ for (i in dir.list){
   DAT$alt_sm[isna] <- DAT$alt[isna]
   # smooth pitch data
   # set negative (bad) altitude data to NA
-  DAT$pitch[which(DAT$pitch>0)] <- NA
+  DAT$pitch[which(DAT$pitch>=0)] <- NA
   # use linear interpolation to replace NAs
   DAT$pitch <- as.numeric(na.interp(DAT$pitch))
   DAT$pitch_sm <- ma(DAT$pitch,order=nav.smoother)
