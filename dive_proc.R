@@ -16,6 +16,7 @@ Sys.setenv(TZ="GMT")
 # load libraries
 library(RODBC);library(reshape2);library(plyr);library(ggplot2);library(forecast);
 library(stringr);library(surveyR);library(scales);library(grid);library(gridExtra);
+suppressPackageStartupMessages(library(cowplot));
 
 # You are about to process DAT, LOG, CTD and PHOTO data for a series of ROV transects
 # You will need to supply some information below
@@ -23,11 +24,11 @@ library(stringr);library(surveyR);library(scales);library(grid);library(gridExtr
 # User-defined variables ####
 # Enter the directory of the ROV database
 # db.dir <- "C:/Users/ROV_LAB/Desktop/SCI_Abalone_2016/ROV_atsea_20151216.accdb"  # on ROV laptop
-db.dir <- "C:/Users/kls/Documents/Data/rov_data/ROV_Master.accdb"  # on KLS desktop
+db.dir <- "D:/DATA/rov_data/ROV_Master.accdb"  # on KLS desktop
 
 # Enter the start and end dive names (if only processing one dive, make these the same)
-start.dir 	<- "16-034A"
-end.dir 	<- "16-048D"
+start.dir 	<- "15-160A"
+end.dir 	<- "16-021A"
 # Is the CTD present (this will almost always be TRUE)
 ctd.on <- TRUE
 # Which ROV was used (e.g., HDHV or Phantom)
@@ -38,7 +39,7 @@ timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add dat
 nav.smoother <- 15
 # path to R processing code
 # proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
-proc.file <- "C:/Users/kls/Documents/Code/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
+proc.file <- "D:/CODE/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
 
 # Query starting IDs for all database tables ####
 channel <- odbcConnectAccess2007(db.dir)
@@ -74,7 +75,7 @@ d <- sort(dir(dat.root,recursive=FALSE,pattern='\\d{2}-\\d{3}\\w',full.names=TRU
 dir.list <- d[grep(start.dir,d):grep(end.dir,d)]
 
 # create status bar
-pb <- winProgressBar(title="DAT File Processing Progress", label="0% done", min=0, max=100, initial=0)
+pb <- winProgressBar(title="ROV File Processing Progress", label="0% done", min=0, max=100, initial=0)
 # set initial variable for counter
 j <- 1
 
@@ -182,7 +183,7 @@ for (i in dir.list){
   # use linear interpolation to replace NAs
   DAT$alt <- as.numeric(na.interp(DAT$alt))
   # smooth altitude data
-  DAT$alt_sm <- ma(DAT$alt,order=nav.smoother)
+  DAT$alt_sm <- as.numeric(ma(DAT$alt,order=nav.smoother))
   # replace NA data with non-smoothed data
   isna <- which(is.na(DAT$alt_sm)==TRUE)
   DAT$alt_sm[isna] <- DAT$alt[isna]
@@ -191,12 +192,12 @@ for (i in dir.list){
   DAT$pitch[which(DAT$pitch>=0)] <- NA
   # use linear interpolation to replace NAs
   DAT$pitch <- as.numeric(na.interp(DAT$pitch))
-  DAT$pitch_sm <- ma(DAT$pitch,order=nav.smoother)
+  DAT$pitch_sm <- as.numeric(ma(DAT$pitch,order=nav.smoother))
   # replace NAs with non-smoothed data
   DAT$pitch_sm[isna] <- DAT$pitch[isna]
   DAT$pitch[which(DAT$pitch>0)] <- NA
   # smooth roll data
-  DAT$roll_sm <- ma(DAT$roll,order=nav.smoother)
+  DAT$roll_sm <- as.numeric(ma(DAT$roll,order=nav.smoother))
   # replace NAs with non-smoothed data
   DAT$roll_sm[isna] <- DAT$roll[isna]
   
@@ -280,11 +281,9 @@ for (i in dir.list){
     geom_line() + theme_bw() + scale_colour_manual("Depth",values=c("green","black")) + 
     xlab("\nTime of Day") + ylab("Depth (m)\n") +	scale_x_datetime()
 
-  # save plot of pitch, roll, and altitude plot	  
-  png(file=file.path(i,paste(dive.name,"NavData.png",sep="_")),w=1800,h=1500, res=150)
-  grid.newpage()
-  grid.arrange(p.p,r.p,a.p,z.p,nrow=4)
-  invisible(dev.off())
+  # save the plot grid
+  nav.grid <- plot_grid(p.p,r.p,a.p,z.p,nrow = 4, align = "v")
+  save_plot(file.path(i,paste(dive.name,"NavData.png",sep="_")),nav.grid, ncol = 1,nrow = 4, base_aspect_ratio = 4)
 
   # Plot camera data ####
   width.df$date_time <- DAT$date.time
