@@ -23,8 +23,8 @@ suppressPackageStartupMessages(library(cowplot));
 
 # User-defined variables ####
 # Enter the directory of the ROV database
-# db.dir <- "C:/Users/ROV_LAB/Desktop/SCI_Abalone_2016/ROV_atsea_20151216.accdb"  # on ROV laptop
-db.dir <- "D:/DATA/rov_data/ROV_Master.accdb"  # on KLS desktop
+db.dir <- "C:/DATA/ROV_AtSea_20160906.accdb"  # on ROV laptop
+# db.dir <- "D:/DATA/rov_data/ROV_Master.accdb"  # on KLS desktop
 
 # Enter the start and end dive names (if only processing one dive, make these the same)
 start.dir 	<- "15-160A"
@@ -38,8 +38,8 @@ ROV <- "HDHV"
 timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add date/time)
 nav.smoother <- 15
 # path to R processing code
-# proc.file <- "C:/Users/ROV_LAB/Desktop/dive_proc/dive_proc.R" # on ROV laptop
-proc.file <- "D:/CODE/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
+proc.file <- "C:/PROJECTS/dive_proc/dive_proc.R" # on ROV laptop
+# proc.file <- "D:/CODE/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
 
 # Query starting IDs for all database tables ####
 channel <- odbcConnectAccess2007(db.dir)
@@ -120,7 +120,7 @@ for (i in dir.list){
   DAT$lon.s <- winfrog2dd(DAT$lon.s)
   # calculate time interval between nav records
   length.DAT <- dim(DAT)[1]
-  time.int <- DAT$date.time[2:length.DAT] - DAT$date.time[1:length.DAT-1]
+  time.int <- as.numeric(DAT$date.time[2:length.DAT] - DAT$date.time[1:length.DAT-1])
   time.int <- c(time.int,0)
   # calculate ship distances (m)
   DAT$disp.s <- DAT$speed.s * 0.514444444 * time.int
