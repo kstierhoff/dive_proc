@@ -23,12 +23,12 @@ suppressPackageStartupMessages(library(cowplot));
 
 # User-defined variables ####
 # Enter the directory of the ROV database
-db.dir <- "C:/DATA/ROV_AtSea_20160906.accdb"  # on ROV laptop
-# db.dir <- "D:/DATA/rov_data/ROV_Master.accdb"  # on KLS desktop
+# db.dir <- "C:/DATA/ROV_AtSea_20160906.accdb"  # on ROV laptop
+db.dir <- "D:/DATA/rov_data/ROV_Master.accdb"  # on KLS desktop
 
 # Enter the start and end dive names (if only processing one dive, make these the same)
-start.dir 	<- "15-160A"
-end.dir 	<- "16-021A"
+start.dir 	<- "16-264A"
+end.dir 	  <- "16-267A"
 # Is the CTD present (this will almost always be TRUE)
 ctd.on <- TRUE
 # Which ROV was used (e.g., HDHV or Phantom)
@@ -36,10 +36,11 @@ ROV <- "HDHV"
 # If the camera time was not set correctly, apply the following time fix
 # If the time was set correctly, all numerics in the string below should be zeros
 timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add date/time)
+# timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add date/time)
 nav.smoother <- 15
 # path to R processing code
-proc.file <- "C:/PROJECTS/dive_proc/dive_proc.R" # on ROV laptop
-# proc.file <- "D:/CODE/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
+# proc.file <- "C:/PROJECTS/dive_proc/dive_proc.R" # on ROV laptop
+proc.file <- "D:/CODE/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
 
 # Query starting IDs for all database tables ####
 channel <- odbcConnectAccess2007(db.dir)
@@ -101,7 +102,7 @@ for (i in dir.list){
                   "blank","blank")
   # remove variables with no data
   DAT <- DAT[ ,names(DAT)!="blank"]
-
+  
   # Process DAT file ####
   # create nav_id and object_id
   DAT$nid <- seq(nav.seed,nav.seed+dim(DAT)[1]-1,1)
@@ -154,9 +155,26 @@ for (i in dir.list){
   # convert pitch and roll to numeric
   pr.data$pitch <- as.numeric(as.character(pr.data$pitch))
   pr.data$roll <- as.numeric(as.character(pr.data$roll))
+  
+  # match pitch and roll data to nav (if RAW data are logged 'With Events')
+  pid <- numeric()
+  pid.lag <- numeric()
+  if(dim(pr.data)[1]!= dim(DAT)[1]){
+    # match P/R and nav datetimes
+    for (jj in 1:dim(DAT)[1]){
+      # calculate the time difference between jth video obs and each nav record
+      time.diff	  <- abs(difftime(DAT$date.time[jj],pr.data$date.time,units = "secs"))
+      # get min index for merging later
+      pid <- c(pid,which.min(time.diff))
+      # get time lag
+      pid.lag <- c(pid.lag,as.numeric(time.diff[which.min(time.diff)]))
+    }
+  }
   # add DVL pitch to the pitch measured by the tilt tray position sensor
-  DAT$pitch <- DAT$pitch + round(pr.data$pitch)
-
+  DAT$pitch <- DAT$pitch + round(pr.data$pitch[pid])
+  # Write DVL pitch/roll data to CSV
+  write.csv(pr.data,file=file.path(i,paste(dive.name,"PitchRollData.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="-999")
+  
   # Process CTD data ####
   if(ctd.on == FALSE){  # If CTD not present, make data -999
     DAT$sal      	  <- rep(-999,length.DAT);
@@ -175,18 +193,23 @@ for (i in dir.list){
     # calculate oxygen saturation during transect
     DAT$oxy.sat <- calc_sat(DAT$sal,DAT$temp,DAT$oxy.conc) 
   }
-
+  
   # Smooth ROV roll, pitch and altitude for width/area calculations ####
   # replace NAs with raw (unsmoothed) data
   # set negative (bad) altitude data to NA
   DAT$alt[which(DAT$alt<0)] <- NA
-  # use linear interpolation to replace NAs
-  DAT$alt <- as.numeric(na.interp(DAT$alt))
-  # smooth altitude data
-  DAT$alt_sm <- as.numeric(ma(DAT$alt,order=nav.smoother))
-  # replace NA data with non-smoothed data
-  isna <- which(is.na(DAT$alt_sm)==TRUE)
-  DAT$alt_sm[isna] <- DAT$alt[isna]
+  # if altitude data is present (not all values > 0)
+  if(length(which(is.na(DAT$alt)==FALSE))>0){
+    # use linear interpolation to replace NAs
+    DAT$alt <- as.numeric(na.interp(DAT$alt))
+    # smooth altitude data
+    DAT$alt_sm <- as.numeric(ma(DAT$alt,order=nav.smoother))
+    # replace NA data with non-smoothed data
+    isna <- which(is.na(DAT$alt_sm)==TRUE)
+    DAT$alt_sm[isna] <- DAT$alt[isna]  
+  }else{
+    DAT$alt_sm <- as.numeric(NA) 
+  }
   # smooth pitch data
   # set negative (bad) altitude data to NA
   DAT$pitch[which(DAT$pitch>=0)] <- NA
@@ -194,11 +217,13 @@ for (i in dir.list){
   DAT$pitch <- as.numeric(na.interp(DAT$pitch))
   DAT$pitch_sm <- as.numeric(ma(DAT$pitch,order=nav.smoother))
   # replace NAs with non-smoothed data
+  isna <- which(is.na(DAT$pitch_sm)==TRUE)
   DAT$pitch_sm[isna] <- DAT$pitch[isna]
   DAT$pitch[which(DAT$pitch>0)] <- NA
   # smooth roll data
   DAT$roll_sm <- as.numeric(ma(DAT$roll,order=nav.smoother))
   # replace NAs with non-smoothed data
+  isna <- which(is.na(DAT$roll_sm)==TRUE)
   DAT$roll_sm[isna] <- DAT$roll[isna]
   
   # Calculate width and area ####
@@ -217,15 +242,15 @@ for (i in dir.list){
                         "oxy.conc","oxy.sat","alt","disp.r","disp.r.cum",
                         "camera_alt","slant_range","center_width","area","cum_area")]
   names(DAT.output) <- c("nav_id","object_id","dive_name","date_time",
-                       "lat_dd_s","lon_dd_s","northing_s","easting_s","heading_s","cmg_s","speed_s","disp_s","cum_disp_s","lat_dd_r","lon_dd_r","depth_r",
+                         "lat_dd_s","lon_dd_s","northing_s","easting_s","heading_s","cmg_s","speed_s","disp_s","cum_disp_s","lat_dd_r","lon_dd_r","depth_r",
                          "northing_r","easting_r","heading_r","cmg_r","speed_r","pitch","roll","temperature","conductivity","pressure","salinity","sound_vel",
                          "oxygen_conc","oxygen_sat","altitude","disp_r","cum_disp_r",
                          "camera_altitude","slant_range","center_width","area_r","cum_area_r")
-
+  
   # write DAT data frame to CSV file for import into the database
   DAT.write <- DAT.output
   DAT.write$date_time <- format(DAT.write$date_time,format="%m/%d/%Y %H:%M:%S")
-  write.csv(DAT.write,file = file.path(i,paste(dive.name,"NavData.txt",sep = "_")),quote = FALSE,row.names = FALSE,na = "")
+  write.csv(DAT.write,file = file.path(i,paste(dive.name,"NavData.txt",sep = "_")),quote = FALSE,row.names = FALSE,na = "-999")
   # add results to DAT.temp
   DAT.temp <- rbind(DAT.temp,DAT.write)
   
@@ -272,28 +297,38 @@ for (i in dir.list){
     xlab("") + ylab("Roll (degrees)\n") + scale_x_datetime() + scale_colour_manual("Roll",values=c("black","blue"))
   # plot altitude data
   a.gg	<- melt(DAT[ ,c("date.time","alt","alt_sm","camera_alt")],id=c("date.time"))
+  if(length(which(is.na(a.gg$value)==FALSE))>0){
   a.p	<- ggplot(a.gg,aes(x=date.time,y=value,colour=variable)) + 
     geom_line() + theme_bw() + 
     xlab("") + ylab("Altitude (meters)\n") + scale_x_datetime() + scale_colour_manual("Altitude",values=c("black","red","blue"))
+  }
   # plot of ROV depth and altitude data
   z.gg	<- melt(DAT[ ,c("date.time","depth.r","depth.msw")],id=c("date.time"))
   z.p		<- ggplot(z.gg,aes(x=date.time,y=value,colour=variable)) + 
     geom_line() + theme_bw() + scale_colour_manual("Depth",values=c("green","black")) + 
     xlab("\nTime of Day") + ylab("Depth (m)\n") +	scale_x_datetime()
-
-  # save the plot grid
-  nav.grid <- plot_grid(p.p,r.p,a.p,z.p,nrow = 4, align = "v")
-  save_plot(file.path(i,paste(dive.name,"NavData.png",sep="_")),nav.grid, ncol = 1,nrow = 4, base_aspect_ratio = 4)
-
-  # Plot camera data ####
-  width.df$date_time <- DAT$date.time
-  w.gg <-  melt(width.df,id=c("date_time"))
-  w.p <- ggplot(w.gg,aes(x=date_time,y=value,colour=variable)) + 
-    geom_line() + theme_bw() + scale_colour_manual("Variable",values=c("green","black","blue")) + 
-    xlab("\nDate/time") + ylab("Variable (m)\n") +	scale_x_datetime() +	
-    labs(title = paste("Camera data from ",dive.name,"\n",sep=""))
-  ggsave(w.p,filename = file.path(i,paste(dive.name,"CameraData.png",sep="_")),height=5,width=10,units="in")
   
+  # save the plot grid
+  if(length(which(is.na(a.gg$value)==FALSE))>0){
+    nav.grid <- plot_grid(p.p,r.p,a.p,z.p,nrow = 4, align = "v")
+    save_plot(file.path(i,paste(dive.name,"NavData.png",sep="_")),nav.grid, ncol = 1,nrow = 4, base_aspect_ratio = 4)
+  }else{
+    nav.grid <- plot_grid(p.p,r.p,z.p,nrow = 3, align = "v")
+    save_plot(file.path(i,paste(dive.name,"NavData.png",sep="_")),nav.grid, ncol = 1,nrow = 3, base_aspect_ratio = 4)
+  }
+  
+  # Plot camera data ####
+  # if camera altitude data is not all NA
+  if(length(which(is.na(width.df$camera_altitude)==FALSE))>0){
+    width.df$date_time <- DAT$date.time
+    w.gg <-  melt(width.df,id=c("date_time"))
+    w.p <- ggplot(w.gg,aes(x=date_time,y=value,colour=variable)) + 
+      geom_line() + theme_bw() + scale_colour_manual("Variable",values=c("green","black","blue")) + 
+      xlab("\nDate/time") + ylab("Variable (m)\n") +	scale_x_datetime() +	
+      labs(title = paste("Camera data from ",dive.name,"\n",sep=""))
+    ggsave(w.p,filename = file.path(i,paste(dive.name,"CameraData.png",sep="_")),height=5,width=10,units="in")
+  }
+ 
   # Plot lat/lon data of the ROV and ship ####
   ship <- DAT[ ,c("lat.s","lon.s")] 
   ship$name <- rep("ship",dim(ship)[1])
@@ -346,7 +381,7 @@ for (i in dir.list){
     LOG.write <- LOG.output 
     LOG.write$date_time <- format(LOG.output$date_time,format="%m/%d/%Y %H:%M:%S")
     # write dive events to text file
-    write.csv(LOG.write,file=file.path(i,paste(dive.name,"DiveEvents.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="")
+    write.csv(LOG.write,file=file.path(i,paste(dive.name,"DiveEvents.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="-999")
     # add results to LOG.temp
     LOG.temp <- rbind(LOG.temp,LOG.write)
   }
@@ -378,7 +413,7 @@ for (i in dir.list){
     # create other variables
     PHOTO$photo_id 	 <- seq(photo.seed,photo.seed+dim(PHOTO)[1]-1,1)
     PHOTO$dive_name  <- rep(dive.name,dim(PHOTO)[1])
-    PHOTO$filepath 	 <- paste("\\\\ballena-2\\ROV\\PHOTOS",PHOTO$dive_name,PHOTO$filename, sep = "\\")
+    PHOTO$filepath 	 <- paste("\\\\swc-storage1\\ROV\\PHOTOS",PHOTO$dive_name,PHOTO$filename, sep = "\\")
     PHOTO$nav_id 	 <- rep(NA,dim(PHOTO)[1])
     PHOTO$lag_s	 	 <- rep(NA,dim(PHOTO)[1])
     PHOTO$comment 	 <- rep(NA,dim(PHOTO)[1])
@@ -397,7 +432,7 @@ for (i in dir.list){
     PHOTO.write <- PHOTO.output
     # format date/time to a database compatible format
     PHOTO.write$date_time <- format(PHOTO.output$date_time,format="%m/%d/%Y %H:%M:%S")
-    write.csv(PHOTO.write,	file = file.path(i,paste(dive.name,"_PhotoInfo.txt",sep = "")),quote = FALSE,row.names = FALSE,na = "")
+    write.csv(PHOTO.write,	file = file.path(i,paste(dive.name,"_PhotoInfo.txt",sep = "")),quote = FALSE,row.names = FALSE,na = "-999")
     # add results to PHOTO.temp
     PHOTO.temp <- rbind(PHOTO.temp,PHOTO.write)
   } else {
@@ -467,7 +502,7 @@ for (i in dir.list){
         # write DAT data frame to CSV file for import into the database
         CTD.output$date_time <- format(CTD.output$date_time,format="%m/%d/%Y %H:%M:%S")
         # save CTD results to file					
-        write.csv(CTD.output,file = file.path(i,paste(CTD.name,".txt",sep="")),quote=FALSE, row.names=FALSE)
+        write.csv(CTD.output,file = file.path(i,paste(CTD.name,".txt",sep="")),quote=FALSE, row.names=FALSE,na = "-999")
         # add CTD results to CTD.temp
         CTD.temp <- rbind(CTD.temp,CTD.output)
         # increment CTD ID by one for next cast
@@ -529,23 +564,23 @@ for (i in dir.list){
 close(pb)
 
 # Write NAV data for all dives to text file
-write.csv(DAT.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"NavData.txt", sep = "_")),row.names = FALSE,quote=FALSE)
+write.csv(DAT.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"NavData.txt", sep = "_")),row.names = FALSE,quote=FALSE,na = "-999")
 # Write PHOTO data for all dives to text file
-write.csv(PHOTO.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"PhotoInfo.txt", sep = "_")),row.names = FALSE,quote=FALSE,na = "")
+write.csv(PHOTO.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"PhotoInfo.txt", sep = "_")),row.names = FALSE,quote=FALSE,na = "-999")
 # Write LOG data for all dives to text file
 if(dim(LOG.temp)[1] > 0){
-  write.csv(LOG.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"DiveEvents.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="")
+  write.csv(LOG.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"DiveEvents.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="-999")
 }
 # Write CTD data for all dives to text file
 if(dim(CTD.temp)[1] > 0){
-  write.csv(CTD.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"CTDCasts.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="")
+  write.csv(CTD.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"CTDCasts.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="-999")
 }
 
 # Copy plots to Results directory
 file.copy(list.files(pattern="*CameraData.png","C:/NAVDATA",recursive = TRUE,full.names = TRUE),file.path(dat.root,"_Results","CameraData"))
 file.copy(list.files(pattern="*PhysData.png","C:/NAVDATA",recursive = TRUE,full.names = TRUE),file.path(dat.root,"_Results","PhysData"))
 file.copy(list.files(pattern="*NavData.png","C:/NAVDATA",recursive = TRUE,full.names = TRUE),file.path(dat.root,"_Results","NavData"))
-file.copy(list.files(pattern="*CTD..png","C:/NAVDATA",recursive = TRUE,full.names = TRUE),file.path(dat.root,"_Results","cTD_Casts"))
+file.copy(list.files(pattern="*CTD.png","C:/NAVDATA",recursive = TRUE,full.names = TRUE),file.path(dat.root,"_Results","CTD_Casts"))
 file.copy(list.files(pattern="*LatLonData.png","C:/NAVDATA",recursive = TRUE,full.names = TRUE),file.path(dat.root,"_Results","LatLonData"))
 
 # Report new indices for next dive ####
