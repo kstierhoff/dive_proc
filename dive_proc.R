@@ -4,9 +4,7 @@
 # Kevin L. Stierhoff
 
 # TO DO:
-# filter/smooth CTD data
-# Check smoothing/filtering of other data used in width calculations
-# fix width and area estimates for pitch > 0. Set to NA?
+#
 
 # Script setup #####
 # clear system memory
@@ -27,7 +25,7 @@ suppressPackageStartupMessages(library(cowplot));
 db.dir <- "D:/DATA/rov_data/ROV_Master.accdb"  # on KLS desktop
 
 # Enter the start and end dive names (if only processing one dive, make these the same)
-start.dir 	<- "16-264A"
+start.dir 	<- "16-266A"
 end.dir 	  <- "16-267A"
 # Is the CTD present (this will almost always be TRUE)
 ctd.on <- TRUE
@@ -46,11 +44,11 @@ proc.file <- "D:/CODE/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
 channel <- odbcConnectAccess2007(db.dir)
 nav.seed    <- as.numeric(sqlQuery(channel, "SELECT max(dbo_tbl_NAV_DATA.nav_id) AS nav_seed
                                    FROM dbo_tbl_NAV_DATA;")[1]+1)
-event.seed  <- as.numeric(sqlQuery(channel, "SELECT max(dbo_tbl_DIVE_EVENTS.event_id) AS nav_seed
+event.seed  <- as.numeric(sqlQuery(channel, "SELECT max(dbo_tbl_DIVE_EVENTS.event_id) AS event_seed
                                    FROM dbo_tbl_DIVE_EVENTS;")[1]+1)
-photo.seed  <- as.numeric(sqlQuery(channel, "SELECT max(dbo_tbl_PHOTO_INFO.photo_id) AS nav_seed
+photo.seed  <- as.numeric(sqlQuery(channel, "SELECT max(dbo_tbl_PHOTO_INFO.photo_id) AS photo_seed
                                    FROM dbo_tbl_PHOTO_INFO;")[1]+1)
-ctd.seed    <- as.numeric(sqlQuery(channel, "SELECT max(dbo_tbl_CTD_CASTS.ctd_id) AS nav_seed
+ctd.seed    <- as.numeric(sqlQuery(channel, "SELECT max(dbo_tbl_CTD_CASTS.ctd_id) AS ctd_seed
                                    FROM dbo_tbl_CTD_CASTS;")[1]+1)
 close(channel)
 
@@ -329,19 +327,6 @@ for (i in dir.list){
     ggsave(w.p,filename = file.path(i,paste(dive.name,"CameraData.png",sep="_")),height=5,width=10,units="in")
   }
  
-  # Plot lat/lon data of the ROV and ship ####
-  ship <- DAT[ ,c("lat.s","lon.s")] 
-  ship$name <- rep("ship",dim(ship)[1])
-  names(ship) <- c("lat","lon","vessel")
-  rov <-  DAT[ ,c("lat.r","lon.r")]
-  rov$name <- rep("ROV",dim(ship)[1])
-  names(rov) <- c("lat","lon","vessel")
-  ll.gg	<- rbind(ship,rov)
-  ll.p	<- ggplot(ll.gg,aes(x=lon,y=lat,colour = vessel)) +
-    geom_path() + coord_map() + theme_bw() + labs(title = paste("Lat/Lon data from ",dive.name,"\n",sep="")) +
-    xlab("\nLongitude") + ylab("Latitude\n") + scale_colour_manual("Vessel",values=c("green","black"))
-  ggsave(ll.p,filename = file.path(i,paste(dive.name,"LatLonData.png",sep="_")))
-  
   # Process WinFrog events from LOG file ####
   log.info <- file.info(file.path(i,'logs.LOG'))
   
@@ -438,6 +423,26 @@ for (i in dir.list){
   } else {
     cat(paste("No photos to process for",dive.name,".\n"))
   }
+  
+  # Plot lat/lon data of the ROV, ship, and photos ####
+  # subset nav data for ship
+  ship <- DAT[ ,c("lat.s","lon.s")] 
+  ship$name <- rep("ship",dim(ship)[1])
+  names(ship) <- c("lat","lon","vessel")
+  # subset nav data for ROV
+  rov <-  DAT[ ,c("lat.r","lon.r")]
+  rov$name <- rep("ROV",dim(ship)[1])
+  names(rov) <- c("lat","lon","vessel")
+  # subset and merge photo info with nav data
+  # photo <- PHOTO[ ,c("nav_id","lag_s")]
+  # photo <- merge(photo,DAT[ ,c("nav_id","lat_dd_r","lon_dd_r")])
+  ll.gg	<- rbind(ship,rov)
+  ll.p	<- ggplot(ll.gg,aes(x=lon,y=lat,colour = vessel)) +
+    geom_path() + coord_map() + theme_bw() + labs(title = paste("Lat/Lon data from ",dive.name,"\n",sep="")) +
+    # geom_point(data = PHOTO,aes(),shape=21,fill='white',colour='black')
+    xlab("\nLongitude") + ylab("Latitude\n") + scale_colour_manual("Vessel",values=c("green","black"))
+  ggsave(ll.p,filename = file.path(i,paste(dive.name,"LatLonData.png",sep="_")))
+  
   
   # Process CTD cast data ####
   # list CTD files in directory
