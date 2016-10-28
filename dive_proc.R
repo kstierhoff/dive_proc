@@ -25,7 +25,7 @@ suppressPackageStartupMessages(library(cowplot));
 db.dir <- "D:/DATA/rov_data/ROV_Master.accdb"  # on KLS desktop
 
 # Enter the start and end dive names (if only processing one dive, make these the same)
-start.dir 	<- "16-266A"
+start.dir 	<- "16-264A"
 end.dir 	  <- "16-267A"
 # Is the CTD present (this will almost always be TRUE)
 ctd.on <- TRUE

@@ -27,14 +27,14 @@ PHOTO <- sqlQuery(channel, "SELECT dbo_tbl_PHOTO_INFO.photo_id, dbo_tbl_PHOTO_IN
 close(channel)
 
 # Enter the start and end dive names (if only processing one dive, make these the same)
-start.dir 	<- "16-036A"
-end.dir 	  <- "16-036D"
+start.dir 	<- "05-104B"
+end.dir 	  <- "05-104B"
 
 # Which ROV was used (e.g., HDHV or Phantom)
 ROV <- "HDHV"
 # If the camera time was not set correctly, apply the following time fix
 # If the time was set correctly, all numerics in the string below should be zeros
-timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add date/time)
+timefix <- '-="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add date/time)
 
 # Create temporary data frames for storing processing results ####
 NAV.temp 	<- data.frame()
@@ -48,13 +48,13 @@ if(.Platform$OS.type == "unix") {
   # if working on a Windows PC
   photo.root 	<- "D:/PHOTOS/ROV_PHOTOS"#  This is the photo directory
 }
-# get a list of WinFrog project directories that contain NAV data
+# get a list of PHOTO directories
 d <- sort(dir(photo.root,recursive=FALSE,pattern='\\d{2}-\\d{3}\\w',full.names=TRUE))
-# dir.list <- d[which(d == start.dir):which(d == end.dir)]
+# select directories that match the start and end directories
 dir.list <- d[grep(start.dir,d):grep(end.dir,d)]
 
 for (i in dir.list){
-  # i = dir.list[1]
+  # i = dir.list[4]
   # extract dive name from directory path
   dive.name <- 	str_extract(i,'\\d{2}-\\d{3}\\w')
   # subset NAV and PHOTO_INFO for each dive

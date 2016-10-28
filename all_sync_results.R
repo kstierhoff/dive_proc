@@ -14,5 +14,5 @@ for(i in files){
 
 dives <- levels(res.temp$dive_name)
 
-write.csv(PHOTO.write,file = file.path("C:/PHOTOS",paste(dives[1],dives[length(dives)],"PhotoSyncAll.txt", sep = "_")),row.names = FALSE,quote=FALSE,na = "-999")
+write.csv(res.temp,file = file.path("C:/PHOTOS",paste(dives[1],dives[length(dives)],"PhotoSyncAll.txt", sep = "_")),row.names = FALSE,quote=FALSE,na = "-999")
 
