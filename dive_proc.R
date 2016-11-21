@@ -25,8 +25,8 @@ suppressPackageStartupMessages(library(cowplot));
 db.dir <- "D:/DATA/rov_data/ROV_Master.accdb"  # on KLS desktop
 
 # Enter the start and end dive names (if only processing one dive, make these the same)
-start.dir 	<- "16-264A"
-end.dir 	  <- "16-267A"
+start.dir 	<- "15-160A"
+end.dir 	  <- "16-264A"
 # Is the CTD present (this will almost always be TRUE)
 ctd.on <- TRUE
 # Which ROV was used (e.g., HDHV or Phantom)
@@ -77,7 +77,6 @@ dir.list <- d[grep(start.dir,d):grep(end.dir,d)]
 pb <- winProgressBar(title="ROV File Processing Progress", label="0% done", min=0, max=100, initial=0)
 # set initial variable for counter
 j <- 1
-
 for (i in dir.list){
   # Copy this script and the functions source code to the DAT directory
   invisible(file.copy(proc.file,i,overwrite = TRUE))
@@ -154,10 +153,11 @@ for (i in dir.list){
   pr.data$pitch <- as.numeric(as.character(pr.data$pitch))
   pr.data$roll <- as.numeric(as.character(pr.data$roll))
   
-  # match pitch and roll data to nav (if RAW data are logged 'With Events')
+  # match pitch and roll data to nav 
   pid <- numeric()
   pid.lag <- numeric()
-  if(dim(pr.data)[1]!= dim(DAT)[1]){
+  # (if RAW data are logged 'With Events')
+  if(dim(pr.data)[1]!= dim(DAT)[1]){ 
     # match P/R and nav datetimes
     for (jj in 1:dim(DAT)[1]){
       # calculate the time difference between jth video obs and each nav record
@@ -167,9 +167,13 @@ for (i in dir.list){
       # get time lag
       pid.lag <- c(pid.lag,as.numeric(time.diff[which.min(time.diff)]))
     }
+    # add DVL pitch to the pitch measured by the tilt tray position sensor
+    DAT$pitch <- DAT$pitch + round(pr.data$pitch[pid])
+  } else { # (if RAW data are logged 'With Events')
+    # add DVL pitch to the pitch measured by the tilt tray position sensor
+    DAT$pitch <- DAT$pitch + round(pr.data$pitch)
   }
-  # add DVL pitch to the pitch measured by the tilt tray position sensor
-  DAT$pitch <- DAT$pitch + round(pr.data$pitch[pid])
+
   # Write DVL pitch/roll data to CSV
   write.csv(pr.data,file=file.path(i,paste(dive.name,"PitchRollData.txt", sep = "_")),row.names = FALSE,quote=FALSE,na="-999")
   
@@ -345,12 +349,19 @@ for (i in dir.list){
     LOG$oid <- seq(1,dim(LOG)[1],1)
     # add dive name variable to data frame
     LOG$dive.name <- as.factor(rep(dive.name,dim(LOG)[1]))
-    # add nav_id and lag_s variable to data frame
-    LOG$nav.id <- as.numeric(rep(NA,dim(LOG)[1]))
-    LOG$lag.s <- LOG$nav.id
+    # # add nav_id and lag_s variable to data frame
+    # LOG$nav.id <- as.numeric(rep(NA,dim(LOG)[1]))
+    # LOG$lag.s <- LOG$nav.id
+    
     # convert date.time to POSIXct
     LOG$date.time <- as.POSIXct(LOG$date.time,format = "%m-%d-%y %H:%M:%OS") 	# 04-17-12 21:45:57.2
-    # convert lat/lon from factor to character
+    # sync log and nav datetimes
+    for (kk in 1:nrow(LOG)){
+      # calculate the time difference between jth video obs and each nav record
+      time.diff	<- abs(difftime(LOG$date.time[kk],DAT$date.time,units = "secs"))
+      LOG$nav.id[kk]	<- DAT$nid[which.min(time.diff)]
+      LOG$lag.s[kk] 	<- min(time.diff)
+    }
     # convert ROV lat/lon to decimal degrees
     LOG$lat.r <- winfrog2dd(LOG$lat.r)
     LOG$lon.r <- winfrog2dd(LOG$lon.r)
