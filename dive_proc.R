@@ -10,8 +10,7 @@ rm(list = ls())
 Sys.setenv(TZ = "GMT")
 
 # List packages required to run the script
-pkgs <- c("tidyverse","RODBC","reshape2","plyr","forecast",
-          "scales","grid","gridExtra","cowplot","exifr")
+pkgs <- c("tidyverse","lubridate","RODBC","forecast","cowplot","exifr")
 
 # Install and load all CRAN packages provided from a character vector
 load_pkgs = function(pkgs) {
@@ -42,7 +41,7 @@ db.dir <- "D:/DATA/rov_data/ROV_Master.accdb"  # on KLS desktop
 # Enter the start and end dive names (if only processing one dive, make these the same)
 start.dir 	<- "16-341A"
 end.dir 	  <- "16-342D"
-# Is the CTD present (this will almost always be TRUE)
+# Is the CTD present (this will almost always be T)
 ctd.on <- T
 # Which ROV was used (e.g., HDHV or Phantom)
 ROV <- "HDHV"
@@ -119,11 +118,10 @@ for (i in dir.list) {
   DAT <- DAT[ ,names(DAT) != "blank"]
   
   # Process DAT file ####
-  # create nav_id and object_id
   options(digits = 9)
-  # Create new variables and format data
+
   DAT <- DAT %>% 
-    mutate(nav_id    = seq(nav.seed,nav.seed + dim(DAT)[1] - 1,1),
+    mutate(nav_id    = seq(nav.seed,nav.seed + nrow(DAT) - 1,1),
            object_id = oid + 1,
            dive_name = as.factor(dive.name),
            date_time = as.POSIXct(date_time,format = "%m-%d-%y %H:%M:%OS"),
@@ -189,7 +187,7 @@ for (i in dir.list) {
             row.names = F,quote = F,na = "-999")
   
   # Process CTD data ####
-  if (ctd.on == FALSE) {  # If CTD not present, make data -999
+  if (ctd.on == F) {  # If CTD not present, make data -999
     DAT <- DAT %>% 
       mutate(
         sal           = -999,
@@ -220,7 +218,7 @@ for (i in dir.list) {
     # smooth altitude data
     DAT$altitude_sm <- as.numeric(ma(DAT$altitude,order = nav.smoother))
     # replace NA data with non-smoothed data
-    isna <- which(is.na(DAT$altitude_sm) == TRUE)
+    isna <- which(is.na(DAT$altitude_sm) == T)
     DAT$altitude_sm[isna] <- DAT$altitude[isna] 
   } else {
     DAT$altitude_sm <- as.numeric(NA) 
@@ -417,9 +415,9 @@ for (i in dir.list) {
     }
     
     PHOTO <- read_exif(p, tags = c("filename","createdate"), recursive = T) %>% 
-      dplyr::rename(filename = FileName) %>% 
+      rename(filename = FileName) %>% 
       mutate(
-        date_time = lubridate::ymd_hms(CreateDate),
+        date_time = ymd_hms(CreateDate),
         photo_id  = seq(photo.seed,photo.seed + length(date_time) - 1, 1),
         dive_name = dive.name,
         filepath  = paste("\\\\swc-storage1\\ROV\\PHOTOS", dive_name, filename, sep = "\\"),
@@ -455,13 +453,13 @@ for (i in dir.list) {
   # subset nav data for ship
   ship <- select(DAT, lat_s, long_s) %>% 
     mutate(vessel = "ship") %>% 
-    dplyr::rename(lat = lat_s,
+    rename(lat = lat_s,
                   long = long_s)
   
   # subset nav data for ROV
   rov <- select(DAT, lat_r, long_r) %>% 
     mutate(vessel = "ROV") %>% 
-    dplyr::rename(lat = lat_r,
+    rename(lat = lat_r,
                   long = long_r)
   
   ll.gg	<- rbind(ship,rov)
@@ -474,7 +472,7 @@ for (i in dir.list) {
   
   # Process CTD cast data ####
   # list CTD files in directory
-  CTD.dir <- list.files(i, pattern = "\\d{2}-\\d{3}\\w{1}_(CTD.)(\\(\\d{3}-\\d{6}\\))?.DAT", full.names = TRUE)
+  CTD.dir <- list.files(i, pattern = "\\d{2}-\\d{3}\\w{1}_(CTD.)(\\(\\d{3}-\\d{6}\\))?.DAT", full.names = T)
   
   if (length(CTD.dir) == 0) {
     # If no CTD files are present, do nothing
@@ -484,7 +482,7 @@ for (i in dir.list) {
     for (ii in CTD.dir) {
       # Get CTD name
       CTD.name <- str_extract(ii,'\\d{2}-\\d{3}\\w{1}_(CTD.)')
-      CTD <- read.csv(ii, header = FALSE)
+      CTD <- read.csv(ii, header = F)
       CTD <- CTD[ ,c(1:47,65)]
       # add variable names to data frame
       names(CTD) <- c("object_id","blank","date_time","lat_c","long_c","depth","northing_c","easting_c","blank","blank","blank",
@@ -508,7 +506,7 @@ for (i in dir.list) {
           time.int  = c(date_time[2:length(date_time)] - date_time[1:length(date_time) - 1], 0))
       
       # process CTD data
-      if (ctd.on == FALSE) {  # If CTD not present, make data -999
+      if (ctd.on == F) {  # If CTD not present, make data -999
         CTD <- CTD %>% 
           mutate(
             sal           = -999,
@@ -547,7 +545,7 @@ for (i in dir.list) {
       
       # plot data from each CTD cast
       CTD.gg <- select(CTD, object_id, temperature, salinity, oxygen_conc, sound_vel, depth) %>% 
-        dplyr::rename(
+        rename(
           "Temperature (C)" = temperature,
           "Salinity (PSU)" = salinity,
           "Oxygen Concentration (uMol)" = oxygen_conc,
@@ -609,33 +607,37 @@ for (i in dir.list) {
 close(pb)
 
 # Write NAV data for all dives to text file
-write.csv(DAT.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"NavData.txt", sep = "_")),
-          row.names = F, quote = FALSE, na = "-999")
+write.csv(DAT.temp,file = file.path(dat.root,"_Results", paste(start.dir,end.dir,"NavData.txt", sep = "_")),
+          row.names = F, quote = F, na = "-999")
+
 # Write PHOTO data for all dives to text file
-write.csv(PHOTO.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"PhotoInfo.txt", sep = "_")),
-          row.names = F,quote = F, na = "-999")
+if (nrow(PHOTO.temp) > 0) {
+  write.csv(PHOTO.temp,file = file.path(dat.root,"_Results", paste(start.dir,end.dir,"PhotoInfo.txt", sep = "_")),
+            row.names = F,quote = F, na = "-999")
+}
+
 # Write LOG data for all dives to text file
-if (dim(LOG.temp)[1] > 0) {
-  write.csv(LOG.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"DiveEvents.txt", sep = "_")),
+if (nrow(LOG.temp) > 0) {
+  write.csv(LOG.temp,file = file.path(dat.root,"_Results", paste(start.dir,end.dir,"DiveEvents.txt", sep = "_")),
             row.names = F, quote  = F, na = "-999")
 }
 # Write CTD data for all dives to text file
-if (dim(CTD.temp)[1] > 0) {
-  write.csv(CTD.temp,file = file.path(dat.root,"_Results",paste(start.dir,end.dir,"CTDCasts.txt", sep = "_")),
+if (nrow(CTD.temp) > 0) {
+  write.csv(CTD.temp,file = file.path(dat.root,"_Results", paste(start.dir,end.dir,"CTDCasts.txt", sep = "_")),
             row.names = F,quote = F,na = "-999")
 }
 
 # Copy plots to Results directory
-file.copy(list.files(pattern = "*CameraData.png","C:/NAVDATA", recursive = T, full.names = TRUE), 
-          file.path(dat.root, "_Results", "CameraData"))
-file.copy(list.files(pattern = "*PhysData.png","C:/NAVDATA", recursive = TRUE, full.names = TRUE), 
-          file.path(dat.root, "_Results", "PhysData"))
-file.copy(list.files(pattern = "*NavData.png","C:/NAVDATA", recursive = TRUE, full.names = TRUE), 
-          file.path(dat.root, "_Results", "NavData"))
-file.copy(list.files(pattern = "*CTD.png","C:/NAVDATA", recursive = TRUE, full.names = TRUE), 
-          file.path(dat.root, "_Results", "CTD_Casts"))
-file.copy(list.files(pattern = "*LatLonData.png","C:/NAVDATA", recursive = TRUE, full.names = TRUE), 
-          file.path(dat.root, "_Results", "LatLonData"))
+file.copy(list.files(pattern = "*CameraData.png","C:/NAVDATA", recursive = T, full.names = T), 
+          file.path(dat.root, "_Results", "CameraData"), overwrite = T)
+file.copy(list.files(pattern = "*PhysData.png","C:/NAVDATA", recursive = T, full.names = T), 
+          file.path(dat.root, "_Results", "PhysData"), overwrite = T)
+file.copy(list.files(pattern = "*NavData.png","C:/NAVDATA", recursive = T, full.names = T), 
+          file.path(dat.root, "_Results", "NavData"), overwrite = T)
+file.copy(list.files(pattern = "*CTD.png","C:/NAVDATA", recursive = T, full.names = T), 
+          file.path(dat.root, "_Results", "CTD_Casts"), overwrite = T)
+file.copy(list.files(pattern = "*LatLonData.png","C:/NAVDATA", recursive = T, full.names = T), 
+          file.path(dat.root, "_Results", "LatLonData"), overwrite = T)
 
 # Report new indices for next dive ####
 cat(paste("Finished processing dives", start.dir, "to", end.dir, "\n", sep = " "),
