@@ -4,31 +4,18 @@
 # Kevin L. Stierhoff
 
 # Script setup #####
-# clear system memory
-rm(list = ls())
 # Set time zone to GMT
 Sys.setenv(TZ = "GMT")
 
-# List packages required to run the script
-pkgs <- c("tidyverse","lubridate","RODBC","forecast","cowplot","exifr")
+# Install and load pacman (library management package)
+if (!require("pacman")) install.packages("pacman")
 
-# Install and load all CRAN packages provided from a character vector
-load_pkgs = function(pkgs) {
-  new_pkgs = pkgs[!(pkgs %in% installed.packages()[ ,'Package'])]
-  if (length(new_pkgs) > 0) install.packages(new_pkgs)
-  invisible(lapply(pkgs,function(x)
-    suppressPackageStartupMessages(library(x,character.only = T))))
-}
-# Load packages
-load_pkgs(pkgs)
+# Install and load required packages from CRAN ---------------------------------
+pacman::p_load(tidyverse,lubridate,here,RODBC,forecast,cowplot,exifr)
 
-# Install and load surveyR package from github
-if ("surveyR" %in% installed.packages()[ ,'Package'] == F) {
-  install_github("kstierhoff/surveyR")
-}
-
-# Load surveyR
-library(surveyR)
+# Install and load required packages from Github -------------------------------
+# surveyR
+pacman::p_load_gh("kstierhoff/surveyR")
 
 # You are about to process DAT, LOG, CTD and PHOTO data for a series of ROV transects
 # You will need to supply some information below
@@ -67,10 +54,10 @@ ctd.seed    <- as.numeric(sqlQuery(channel, "SELECT max(dbo_tbl_CTD_CASTS.ctd_id
 close(channel)
 
 # Create temporary data frames for storing processing results ####
-DAT.temp 	<- data.frame()
-PHOTO.temp	<- data.frame()
-LOG.temp 	<- data.frame()
-CTD.temp 	<- data.frame()
+DAT.temp 	 <- data.frame()
+PHOTO.temp <- data.frame()
+LOG.temp 	 <- data.frame()
+CTD.temp 	 <- data.frame()
 
 # Process NAV date from DAT files ####
 if (.Platform$OS.type == "unix") { 
