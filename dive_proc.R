@@ -5,7 +5,7 @@
 
 # Script setup #####
 # Set time zone to GMT
-Sys.setenv(TZ = "GMT")
+# Sys.setenv(TZ = "GMT")
 
 # Install and load pacman (library management package)
 if (!require("pacman")) install.packages("pacman")
@@ -22,8 +22,8 @@ pacman::p_load_gh("kstierhoff/surveyR")
 
 # User-defined variables ####
 # Enter the directory of the ROV database
-# db.dir <- "C:/DATA/ROV_AtSea_20160906.accdb"  # on ROV laptop
-db.dir <- "D:/DATA/rov_data/ROV_Master.accdb"  # on KLS desktop
+db.dir <- "C:/DATA/ROV_AtSea_20191126.accdb"  # on ROV laptop
+# db.dir <- "D:/DATA/rov_data/ROV_Master.accdb"  # on KLS desktop
 
 # Enter the start and end dive names (if only processing one dive, make these the same)
 start.dir 	<- "16-341A"
@@ -39,7 +39,7 @@ timefix <- '+="0:0:0 0:0:0"' #e.g., -=Y:M:D h:m:s (- or + to subtract or add dat
 nav.smoother <- 15
 # path to R processing code
 # proc.file <- "C:/PROJECTS/dive_proc/dive_proc.R" # on ROV laptop
-proc.file <- "D:/CODE/R/KLS_packages/dive_proc/dive_proc.R" # on KLS desktop
+proc.file <- "D:/CODE/R_packages/dive_proc/dive_proc.R" # on KLS desktop
 
 # Query starting IDs for all database tables ####
 channel <- odbcConnectAccess2007(db.dir)
@@ -71,18 +71,23 @@ if (.Platform$OS.type == "unix") {
 }
 # get a list of WinFrog project directories that contain NAV data
 d <- sort(dir(dat.root,recursive = F, pattern = "\\d{2}-\\d{3}\\w", full.names = T))
+
 # dir.list <- d[which(d == start.dir):which(d == end.dir)]
 dir.list <- d[grep(start.dir,d):grep(end.dir,d)]
 
 # create status bar
 pb <- winProgressBar(title = "ROV File Processing Progress", label = "0% done", min = 0, max = 100, initial = 0)
+
 # set initial variable for counter
 j <- 1
+
 for (i in dir.list) {
   # Copy this script and the functions source code to the DAT directory
   invisible(file.copy(proc.file, i, overwrite = T))
+  
   # extract dive name from directory path
   dive.name <- 	str_extract(i,"\\d{2}-\\d{3}\\w")
+  
   # list DAT files in directory
   dat.files <- list.files(i, pattern = "\\d{2}-\\d{3}\\w{1}(\\(\\d{3}-\\d{6}\\))?.DAT", full.names = T)
   
@@ -94,6 +99,7 @@ for (i in dir.list) {
   }
   # subset columns
   DAT <- select(DAT ,c(1:47,65))
+  
   # add variable names to data frame
   names(DAT) <- c("oid","blank","date_time","lat_r","long_r","depth","northing_r","easting_r",
                   "blank","blank","blank","heading_r","cmg_r","speed_r","blank","blank","blank","blank",
@@ -102,21 +108,21 @@ for (i in dir.list) {
                   "blank","blank","lat_s","long_s","blank","northing_s","easting_s","blank",
                   "blank","blank","heading_s","cmg_s","speed_s","blank","blank","blank")
   # remove variables with no data
-  DAT <- DAT[ ,names(DAT) != "blank"]
+  DAT <- DAT[ , names(DAT) != "blank"]
   
   # Process DAT file ####
   options(digits = 9)
 
   DAT <- DAT %>% 
-    mutate(nav_id    = seq(nav.seed,nav.seed + nrow(DAT) - 1,1),
+    mutate(nav_id    = seq(nav.seed, nav.seed + nrow(DAT) - 1,1),
            object_id = oid + 1,
            dive_name = as.factor(dive.name),
-           date_time = as.POSIXct(date_time,format = "%m-%d-%y %H:%M:%OS"),
+           date_time = as.POSIXct(date_time, format = "%m-%d-%y %H:%M:%OS"),
            lat_r     = winfrog2dd(lat_r),
            long_r    = winfrog2dd(long_r),
            lat_s     = winfrog2dd(lat_s),
            long_s    = winfrog2dd(long_s),
-           time.int  = c(as.numeric(date_time[2:nrow(DAT)] - date_time[1:nrow(DAT) - 1]),0),
+           time.int  = c(as.numeric(date_time[2:nrow(DAT)] - date_time[1:nrow(DAT) - 1]), 0),
            disp_s    = speed_s * 0.514444444 * time.int,
            disp_r    = speed_r * 0.514444444 * time.int,
            good      = 1)
@@ -124,6 +130,7 @@ for (i in dir.list) {
   # Add DVL pitch/roll to position sensor to get the actual pitch/roll of the camera ####
   # get directory of WinFrog RAW files to read
   raw.files <- list.files(i, pattern = "*.RAW", full.names = T)
+  
   pr.data <- data.frame()
   for (k in raw.files) {
     pr.temp <- readLines(k)
@@ -143,6 +150,7 @@ for (i in dir.list) {
     # rbind all dataframes together
     pr.data <- rbind(pr.data,pr.temp)
   }
+  
   # convert pitch and roll to numeric
   pr.data <- pr.data %>% 
     mutate(pitch = as.numeric(as.character(pitch)),
@@ -151,6 +159,7 @@ for (i in dir.list) {
   # match pitch and roll data to nav 
   pid <- numeric()
   pid.lag <- numeric()
+  
   # (if RAW data are logged 'With Events')
   if (nrow(pr.data) != nrow(DAT)) { 
     # match P/R and nav datetimes
@@ -198,6 +207,7 @@ for (i in dir.list) {
   # replace NAs with raw (unsmoothed) data
   # set negative (bad) altitude data to NA
   DAT$altitude[which(DAT$altitude < 0)] <- NA
+  
   # if altitude data is present (not all values > 0)
   if (length(which(is.na(DAT$altitude) == F)) > 0) {
     # use linear interpolation to replace NAs
@@ -210,6 +220,7 @@ for (i in dir.list) {
   } else {
     DAT$altitude_sm <- as.numeric(NA) 
   }
+  
   # smooth pitch data
   # set negative (bad) altitude data to NA
   DAT$pitch[which(DAT$pitch >= 0)] <- NA
@@ -270,6 +281,7 @@ for (i in dir.list) {
     theme(strip.text.x = element_text(size = 12, face = "bold"),
           strip.background = element_rect(fill = "white"),
           panel.spacing = unit(1, "lines"))
+  
   ggsave(ctd.p, filename = file.path(i, paste(dive.name,"PhysData.png",sep = "_")), 
          height = 9.8, width = 13.3, units = "in")
   
@@ -422,14 +434,16 @@ for (i in dir.list) {
     
     # write PHOTO_INFO to a text file
     PHOTO.output <- select(PHOTO, photo_id, nav_id, lag_s, dive_name, date_time, filename, filepath, comment)
+    
     # create a duplicate df for writing to the database
     PHOTO.write <- PHOTO.output %>% 
       mutate(date_time = format(date_time, format = "%m/%d/%Y %H:%M:%S"))
+    
     # format date/time to a database compatible format
     PHOTO.write$date_time <- format(PHOTO.output$date_time,format = "%m/%d/%Y %H:%M:%S")
-    
     write.csv(PHOTO.write, file = file.path(i, paste(dive.name, "_PhotoInfo.txt", sep = "")),
               quote = F, row.names = F, na = "-999")
+    
     # add results to PHOTO.temp
     PHOTO.temp <- rbind(PHOTO.temp,PHOTO.write)
   } else {
